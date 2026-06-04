@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #E87F24;
+  --color-primary-hover: #cf6e1b;
+  --color-navy-dark: #07070d;
+  --color-navy-deep: #0f0f1a;
+  --color-navy-light: #16162a;
+  --color-navy-surface: #1e1e38;
+  --color-navy-border: rgba(232, 127, 36, 0.15);
+  --color-gold: #e2a84b;
+  
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--color-navy-dark);
+    color: #f3f4f6;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-navy-dark);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a4a;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism styling */
+  .glass-card {
+    background: rgba(22, 22, 42, 0.65);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .glass-card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .glass-card-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgba(232, 127, 36, 0.3);
+    box-shadow: 0 12px 40px -10px rgba(232, 127, 36, 0.15);
+  }
+
+  .glass-card-orange {
+    background: rgba(232, 127, 36, 0.05);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(232, 127, 36, 0.15);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(232, 127, 36, 0.5);
+  }
+
+  .glow-text-gold {
+    text-shadow: 0 0 20px rgba(226, 168, 75, 0.5);
+  }
+
+  .glow-button {
+    box-shadow: 0 0 20px rgba(232, 127, 36, 0.3);
+    transition: all 0.3s ease;
+  }
+
+  .glow-button:hover {
+    box-shadow: 0 0 30px rgba(232, 127, 36, 0.6);
+  }
+}

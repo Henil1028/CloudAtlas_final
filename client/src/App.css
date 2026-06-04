@@ -1,0 +1,157 @@
+/* Custom Animations and Complex Gradients */
+
+/* Wave Animation */
+@keyframes wave-animation {
+  0% {
+    transform: translateX(0) translateZ(0) scaleY(1);
+  }
+  50% {
+    transform: translateX(-25%) translateZ(0) scaleY(0.85);
+  }
+  100% {
+    transform: translateX(-50%) translateZ(0) scaleY(1);
+  }
+}
+
+.wave-layer {
+  display: block;
+  position: absolute;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  transform-origin: center bottom;
+}
+
+.wave-layer-1 {
+  animation: wave-animation 12s linear infinite;
+  opacity: 0.2;
+}
+
+.wave-layer-2 {
+  animation: wave-animation 18s linear infinite;
+  opacity: 0.15;
+}
+
+.wave-layer-3 {
+  animation: wave-animation 24s linear infinite;
+  opacity: 0.1;
+}
+
+/* Floating Orbs */
+@keyframes float-orb {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.floating-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+  animation: float-orb 15s ease-in-out infinite;
+}
+
+.orb-orange {
+  background: radial-gradient(circle, rgba(232, 127, 36, 0.25) 0%, rgba(232, 127, 36, 0) 70%);
+}
+
+.orb-navy {
+  background: radial-gradient(circle, rgba(22, 36, 71, 0.4) 0%, rgba(22, 36, 71, 0) 75%);
+}
+
+.orb-gold {
+  background: radial-gradient(circle, rgba(226, 168, 75, 0.18) 0%, rgba(226, 168, 75, 0) 70%);
+}
+
+/* Text Gradient Utilities */
+.text-gradient-orange {
+  background: linear-gradient(135deg, #FFF 30%, #E87F24 80%, #e2a84b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #e2a84b 0%, #E87F24 50%, #162447 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Pulse Glow */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.4;
+    box-shadow: 0 0 15px rgba(232, 127, 36, 0.2);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 30px rgba(232, 127, 36, 0.4);
+  }
+}
+
+.glow-pulse {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Border gradient */
+.border-gradient-orange {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--color-navy-deep), var(--color-navy-deep)) padding-box,
+              linear-gradient(135deg, rgba(232,127,36,0.5), rgba(22,36,71,0.2)) border-box;
+}
+
+/* Horizontal Scrolling Logo Marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+.marquee-content {
+  display: inline-block;
+  animation: marquee 25s linear infinite;
+  width: max-content;
+}
+
+.marquee-content:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Grid Background */
+.grid-bg {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Step Arrow Connecting Line Pulse */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.pulsing-dash {
+  stroke-dasharray: 10, 5;
+  animation: dash 5s linear infinite;
+}

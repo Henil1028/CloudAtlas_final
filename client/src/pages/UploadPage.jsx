@@ -1,0 +1,337 @@
+import React, { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Navbar } from '../components/common/Navbar';
+import { Footer } from '../components/common/Footer';
+import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database } from 'lucide-react';
+import api from '../services/api';
+
+export const UploadPage = () => {
+  const [provider, setProvider] = useState('aws');
+  const [file, setFile] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+  
+  // Status states
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [errorList, setErrorList] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [insertedCount, setInsertedCount] = useState(0);
+
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.name.endsWith('.csv')) {
+        setFile(droppedFile);
+        resetStatuses();
+      } else {
+        setErrorMessage('Only CSV files are supported.');
+      }
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      resetStatuses();
+    }
+  };
+
+  const resetStatuses = () => {
+    setSuccess(false);
+    setErrorMessage('');
+    setErrorList([]);
+    setProgress(0);
+  };
+
+  const removeFile = () => {
+    setFile(null);
+    resetStatuses();
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      setErrorMessage('Please select a CSV file first.');
+      return;
+    }
+
+    setUploading(true);
+    setProgress(15);
+    setErrorMessage('');
+    setErrorList([]);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('provider', provider);
+
+    try {
+      setProgress(40);
+      const response = await api.post('/billing/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          // Scale from 40 to 90
+          setProgress(Math.min(90, 40 + Math.round(percentCompleted * 0.5)));
+        }
+      });
+
+      setProgress(100);
+      setSuccess(true);
+      setInsertedCount(response.data.recordsInserted);
+      setFile(null);
+    } catch (err) {
+      setProgress(0);
+      const data = err.response?.data;
+      if (data && data.errors) {
+        setErrorList(data.errors);
+      } else {
+        setErrorMessage(data?.message || 'Server error during ingestion. Please check database connectivity.');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-navy-dark flex flex-col grid-bg text-white">
+      <Navbar />
+
+      <div className="pt-28 pb-16 flex-grow mx-auto max-w-4xl w-full px-4 relative z-10">
+        
+        {/* Back navigation */}
+        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary mb-8 group transition-colors">
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+          Back to Dashboard
+        </Link>
+
+        {/* Upload Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Instructions Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            <div>
+              <span className="text-xs font-semibold text-primary uppercase tracking-widest">FinOps Ingestion</span>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5">
+                Ingest Billing Logs
+              </h1>
+              <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+                Ingested billing logs will be parsed, validated, and normalized before being routed to the XGBoost machine learning engine.
+              </p>
+            </div>
+
+            {/* Ingestion Rules */}
+            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Database className="h-4.5 w-4.5 text-primary" />
+                Ingestion Schemas
+              </h3>
+              
+              <ul className="text-xs text-gray-400 space-y-2.5 list-disc pl-4">
+                <li>Files must be in **CSV** format.</li>
+                <li>Maximum file size limit: **50 MB**.</li>
+                <li>Required columns:
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['date', 'service', 'cost', 'region', 'usage_type', 'provider'].map((col) => (
+                      <span key={col} className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-[10px] text-gray-300 font-mono">
+                        {col}
+                      </span>
+                    ))}
+                  </div>
+                </li>
+                <li>Costs must be numeric values.</li>
+                <li>Providers must map to `aws`, `azure`, or `gcp`.</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Main Upload Box */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="glass-card rounded-2xl p-6 sm:p-8 border-white/5 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+
+              {/* Status messages */}
+              {success && (
+                <div className="mb-6 flex items-start gap-3 rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-green-400">
+                  <CheckCircle className="h-5.5 w-5.5 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm">Upload Ingestion Completed</h4>
+                    <p className="text-xs text-green-500/80 mt-1">
+                      Successfully parsed and stored **{insertedCount} records** inside the CloudAtlas forecasting databases.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="mb-6 flex items-start gap-3 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-red-400">
+                  <AlertCircle className="h-5.5 w-5.5 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm">Ingestion Error</h4>
+                    <p className="text-xs text-red-500/80 mt-1">{errorMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {errorList.length > 0 && (
+                <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-red-400 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5.5 w-5.5 shrink-0" />
+                    <h4 className="font-bold text-sm">Validation Errors ({errorList.length})</h4>
+                  </div>
+                  <div className="max-h-[150px] overflow-y-auto pr-2 space-y-1 text-xs font-mono text-red-300">
+                    {errorList.map((err, idx) => (
+                      <p key={idx}>• {err}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleUploadSubmit} className="space-y-6">
+                
+                {/* Provider Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-3">
+                    Cloud Infrastructure Provider
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['aws', 'azure', 'gcp'].map((p) => (
+                      <button
+                        type="button"
+                        key={p}
+                        onClick={() => setProvider(p)}
+                        className={`py-3.5 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                          provider === p
+                            ? 'bg-primary/10 border-primary text-primary shadow-lg shadow-primary/10'
+                            : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Drag and Drop Zone */}
+                <div className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={triggerFileInput}
+                    className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-12 px-6 text-center cursor-pointer transition-all duration-300 ${
+                      dragActive
+                        ? 'border-primary bg-primary/5'
+                        : 'border-white/10 bg-white/[0.01] hover:border-primary/40 hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-primary mb-4">
+                      <Upload className="h-6 w-6" />
+                    </div>
+
+                    <p className="text-sm font-bold text-white mb-1.5">
+                      Drag & drop your billing CSV here
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      or click to browse local directory
+                    </p>
+                  </div>
+                </div>
+
+                {/* File Preview Card */}
+                {file && (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-white truncate">{file.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="text-xs font-bold text-red-400 hover:text-red-300 hover:underline px-3 py-1 cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+
+                {/* Progress Indicators */}
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-semibold flex items-center gap-1.5">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        Analyzing & mapping records...
+                      </span>
+                      <span className="text-primary font-bold">{progress}%</span>
+                    </div>
+                    <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div
+                        style={{ width: `${progress}%` }}
+                        className="bg-gradient-to-r from-primary to-orange-600 h-full rounded-full transition-all duration-300"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  disabled={!file || uploading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-orange-600 py-4 text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed glow-button transition-all cursor-pointer"
+                >
+                  {uploading ? 'Ingesting Data...' : 'Begin Ingestion Pipeline'}
+                </button>
+
+              </form>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <Footer />
+    </div>
+  );
+};
+export default UploadPage;
