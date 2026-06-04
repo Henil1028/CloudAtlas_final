@@ -16,7 +16,7 @@ export const RegisterPage = () => {
     e.preventDefault();
     setLocalError('');
 
-    if (!name || !email || !password || !secretCode) {
+    if (!name || !email || !password) {
       setLocalError('Please fill in all fields');
       return;
     }
@@ -139,7 +139,7 @@ export const RegisterPage = () => {
             {/* Secret Code Field */}
             <div>
               <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-                Enterprise Invitation Key
+                Enterprise Invitation Key (Optional)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
@@ -150,12 +150,11 @@ export const RegisterPage = () => {
                   value={secretCode}
                   onChange={(e) => setSecretCode(e.target.value)}
                   className="block w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all text-sm"
-                  placeholder="Enter invitation or admin key"
-                  required
+                  placeholder="Enter invitation or admin key (Optional)"
                 />
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5">
-                Creating administrator accounts requires a verified invitation key. In this demo env, configure it in <code className="text-primary font-mono">REGISTRATION_SECRET</code> (default: <span className="text-primary underline">ATLAS-ADMIN-99</span>).
+                Optional: You can leave this blank to register without a key. For admin verification in this demo env, the key defaults to <span className="text-primary underline">ATLAS-ADMIN-99</span>.
               </p>
             </div>
 

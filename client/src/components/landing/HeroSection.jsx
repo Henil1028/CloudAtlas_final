@@ -112,13 +112,13 @@ export const HeroSection = () => {
       {/* SVG Wave layers at the bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-[100px] overflow-hidden pointer-events-none">
         <svg className="wave-layer wave-layer-1" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M0,60 C150,100 350,20 500,60 C650,100 850,20 1000,60 C1150,100 1300,60 1400,60 L1400,120 L0,120 Z" fill="#E87F24" />
+          <path d="M0,60 C150,100 350,20 500,60 C650,100 850,20 1000,60 C1150,100 1300,60 1400,60 L1400,120 L0,120 Z" fill="#0ea5e9" />
         </svg>
         <svg className="wave-layer wave-layer-2" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M0,50 C180,90 280,10 480,50 C680,90 780,10 980,50 C1180,90 1280,50 1400,50 L1400,120 L0,120 Z" fill="#e2a84b" />
+          <path d="M0,50 C180,90 280,10 480,50 C680,90 780,10 980,50 C1180,90 1280,50 1400,50 L1400,120 L0,120 Z" fill="#a855f7" />
         </svg>
         <svg className="wave-layer wave-layer-3" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M0,40 C200,80 300,0 500,40 C700,80 800,0 1000,40 C1200,80 1300,40 1400,40 L1400,120 L0,120 Z" fill="#0f0f1a" />
+          <path d="M0,40 C200,80 300,0 500,40 C700,80 800,0 1000,40 C1200,80 1300,40 1400,40 L1400,120 L0,120 Z" fill="#0b0f19" />
         </svg>
       </div>
     </section>

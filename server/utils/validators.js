@@ -29,8 +29,7 @@ const validateRegister = [
     .matches(/[^a-zA-Z0-9]/)
     .withMessage('Password must contain at least one special character'),
   body('secretCode')
-    .notEmpty()
-    .withMessage('Secret registration code is required')
+    .optional({ checkFalsy: true })
     .trim()
     .escape(),
 ];

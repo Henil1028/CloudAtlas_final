@@ -8,10 +8,10 @@ const register = async (req, res) => {
   try {
     const { name, email, password, secretCode } = req.body;
 
-    // Validate registration secret code (loaded from environment)
+    // Validate registration secret code (optional for now, not strictly enforced)
     const adminSecret = process.env.REGISTRATION_SECRET || 'ATLAS-ADMIN-99';
-    if (secretCode !== adminSecret) {
-      return res.status(403).json({ message: 'Forbidden: Invalid registration access code' });
+    if (secretCode && secretCode !== adminSecret) {
+      console.log(`⚠️ User registered with mismatching/unverified key: ${secretCode}`);
     }
 
     // Check if user already exists

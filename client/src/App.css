@@ -63,26 +63,26 @@
 }
 
 .orb-orange {
-  background: radial-gradient(circle, rgba(232, 127, 36, 0.25) 0%, rgba(232, 127, 36, 0) 70%);
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(14, 165, 233, 0) 70%);
 }
 
 .orb-navy {
-  background: radial-gradient(circle, rgba(22, 36, 71, 0.4) 0%, rgba(22, 36, 71, 0) 75%);
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.5) 0%, rgba(15, 23, 42, 0) 75%);
 }
 
 .orb-gold {
-  background: radial-gradient(circle, rgba(226, 168, 75, 0.18) 0%, rgba(226, 168, 75, 0) 70%);
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0) 70%);
 }
 
 /* Text Gradient Utilities */
 .text-gradient-orange {
-  background: linear-gradient(135deg, #FFF 30%, #E87F24 80%, #e2a84b 100%);
+  background: linear-gradient(135deg, #FFF 30%, #0ea5e9 70%, #a855f7 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .text-gradient-gold {
-  background: linear-gradient(135deg, #e2a84b 0%, #E87F24 50%, #162447 100%);
+  background: linear-gradient(135deg, #0ea5e9 0%, #a855f7 50%, #1e1b4b 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -91,11 +91,11 @@
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 0.4;
-    box-shadow: 0 0 15px rgba(232, 127, 36, 0.2);
+    box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
   }
   50% {
     opacity: 0.8;
-    box-shadow: 0 0 30px rgba(232, 127, 36, 0.4);
+    box-shadow: 0 0 30px rgba(14, 165, 233, 0.4);
   }
 }
 
@@ -107,7 +107,7 @@
 .border-gradient-orange {
   border: 1px solid transparent;
   background: linear-gradient(var(--color-navy-deep), var(--color-navy-deep)) padding-box,
-              linear-gradient(135deg, rgba(232,127,36,0.5), rgba(22,36,71,0.2)) border-box;
+              linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(168, 85, 247, 0.2)) border-box;
 }
 
 /* Horizontal Scrolling Logo Marquee */

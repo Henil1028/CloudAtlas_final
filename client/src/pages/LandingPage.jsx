@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Navbar } from '../components/common/Navbar';
+import { CursorInkSpread } from '../components/common/CursorInkSpread';
 import { HeroSection } from '../components/landing/HeroSection';
 import { TrustedTechSection } from '../components/landing/TrustedTechSection';
 import { ProblemSection } from '../components/landing/ProblemSection';
@@ -33,42 +34,29 @@ export const LandingPage = () => {
   }, [location]);
 
   return (
-    <div className="bg-navy-dark min-h-screen text-white overflow-x-hidden selection:bg-primary selection:text-white">
-      {/* Header Navigation */}
+    <div className="bg-navy-dark min-h-screen text-white overflow-x-hidden selection:bg-primary selection:text-white relative grid-bg">
+      {/* Floating background glowing orbs */}
+      <div className="floating-orb orb-orange w-[500px] h-[500px] top-[-10%] right-[-10%]" />
+      <div className="floating-orb orb-navy w-[600px] h-[600px] bottom-[-20%] left-[-10%]" />
+      <div className="floating-orb orb-gold w-[400px] h-[400px] top-[40%] left-[30%]" />
+
+      {/* Interactive Cursor Ink Spread Canvas */}
+      <CursorInkSpread />
+
+      {/* Temporarily hidden sections to isolate background and cursor evaluation
       <Navbar />
-
-      {/* Hero Intro */}
       <HeroSection />
-
-      {/* Rolling tech marquee */}
       <TrustedTechSection />
-
-      {/* Problem analysis */}
       <ProblemSection />
-
-      {/* Solutions */}
       <SolutionSection />
-
-      {/* ML precision cost features */}
       <FeaturesSection />
-
-      {/* Platform tech architecture */}
       <TechStackSection />
-
-      {/* Pipeline / Stepper timeline */}
       <WorkflowSection />
-
-      {/* Simulated Console Mockup */}
       <DashboardPreviewSection />
-
-      {/* Pricing subscriptions */}
       <PricingSection />
-
-      {/* Action CTA */}
       <CTASection />
-
-      {/* Page Footer */}
       <Footer />
+      */}
     </div>
   );
 };
