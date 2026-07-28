@@ -1,5 +1,6 @@
 import React from 'react';
 import { Cpu, BarChart2, Bell, HelpCircle, Layers, Globe, CheckCircle } from 'lucide-react';
+import { TiltCard } from '../common/TiltCard';
 
 export const FeaturesSection = () => {
   const features = [
@@ -36,14 +37,15 @@ export const FeaturesSection = () => {
   ];
 
   return (
-    <section id="features" className="relative py-24 bg-navy-dark overflow-hidden">
+    <section id="features" className="relative py-24 overflow-hidden" style={{ backgroundColor: 'var(--color-navy-dark)' }}>
       {/* Background orbs */}
-      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-gold/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-[#00D4FF]/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] bg-[#0066FF]/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Capabilities</span>
+          <span className="text-xs font-semibold text-[#00D4FF] uppercase tracking-widest">Capabilities</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mt-2">
             Engineered for Precision Cost Control
           </h2>
@@ -57,12 +59,12 @@ export const FeaturesSection = () => {
           {features.map((feat, index) => {
             const IconComp = feat.icon;
             return (
-              <div
+              <TiltCard
                 key={index}
-                className="glass-card p-6 sm:p-8 rounded-2xl border border-white/5 hover:border-primary/20 hover:scale-[1.02] shadow-xl transition-all duration-300 relative group overflow-hidden"
+                className="glass-card p-6 sm:p-8 rounded-2xl border border-white/5 relative group overflow-hidden"
               >
                 {/* Micro animation glow overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary-hover/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
                 <div className="flex items-center gap-3.5 mb-4 relative z-10">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-all">
@@ -71,7 +73,7 @@ export const FeaturesSection = () => {
                   <h3 className="text-base sm:text-lg font-bold text-white">{feat.title}</h3>
                 </div>
                 <p className="text-xs sm:text-sm text-gray-400 leading-relaxed relative z-10">{feat.description}</p>
-              </div>
+              </TiltCard>
             );
           })}
         </div>

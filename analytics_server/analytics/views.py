@@ -25,9 +25,9 @@ def authorize_user(request):
     
     try:
         decoded = jwt.decode(token, jwt_secret, algorithms=['HS256'])
-        # Restrict to super_admin as requested
-        if decoded.get('role') != 'super_admin':
-            raise AuthenticationFailed('Access forbidden: Super Admin role required')
+        # Restrict to super_admin, admin, and user roles
+        if decoded.get('role') not in ['super_admin', 'admin', 'user']:
+            raise AuthenticationFailed('Access forbidden: Authorized role required')
         return decoded
     except jwt.ExpiredSignatureError:
         raise AuthenticationFailed('Token has expired')
@@ -78,33 +78,72 @@ def get_mock_python_records():
         })
     return records
 
-# Retrieve records from MongoDB, fallback to mock python records
-def get_billing_records():
+# Retrieve records from MongoDB, fallback to Express API, then mock data
+def get_billing_records(user_id=None, auth_token=None):
     mongo_uri = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/cloudatlas')
+    express_url = os.environ.get('EXPRESS_API_URL', 'http://localhost:5000')
     import pymongo
+    from bson.objectid import ObjectId
+
+    # --- Attempt 1: MongoDB ---
     try:
-        client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=1500)
-        # Check connection validity
+        client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=1200)
         client.server_info()
         db = client['cloudatlas']
-        # Node Mongoose collections default pluralization check
         collection = db['billingdatas']
-        records = list(collection.find())
         
-        if len(records) == 0:
-            return get_mock_python_records()
-            
+        filter_dict = {}
+        if user_id:
+            try:
+                filter_dict['uploadedBy'] = ObjectId(user_id)
+            except Exception:
+                filter_dict['uploadedBy'] = user_id
+                
+        records = list(collection.find(filter_dict))
+        
         for r in records:
             r['_id'] = str(r['_id'])
-            # Ensure dates serialize cleanly
             if isinstance(r.get('date'), datetime.datetime):
                 r['date'] = r['date'].strftime('%Y-%m-%d')
             if isinstance(r.get('uploadDate'), datetime.datetime):
                 r['uploadDate'] = r['uploadDate'].strftime('%Y-%m-%d')
-        return records
+
+        if len(records) > 0:
+            return records
+        # MongoDB online but empty — fall through to Express fallback
     except Exception:
-        # Fallback to local python records
-        return get_mock_python_records()
+        pass  # MongoDB offline — fall through to Express fallback
+
+    # --- Attempt 2: Express Node.js in-memory API ---
+    try:
+        import urllib.request
+        import urllib.error
+        headers = {}
+        if auth_token:
+            headers['Authorization'] = f'Bearer {auth_token}'
+        
+        req = urllib.request.Request(
+            f'{express_url}/api/billing?limit=100000',
+            headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=3) as response:
+            import json as json_lib
+            data = json_lib.loads(response.read().decode())
+            records = data.get('data', data) if isinstance(data, dict) else data
+            if isinstance(records, list) and len(records) > 0:
+                # Normalize date fields
+                for r in records:
+                    if isinstance(r.get('date'), str):
+                        pass  # already string
+                    elif hasattr(r.get('date'), 'strftime'):
+                        r['date'] = r['date'].strftime('%Y-%m-%d')
+                return records
+    except Exception as e:
+        pass  # Express API fallback failed — fall through to mock
+
+    # --- Attempt 3: Python-generated mock data ---
+    return get_mock_python_records()
+
 
 # Helper to filter records before analytics pipeline runs
 def filter_records(records, query_params):
@@ -168,8 +207,9 @@ def filter_records(records, query_params):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_summary(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     
@@ -188,8 +228,9 @@ def get_analytics_summary(request):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_quality(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     return Response(pipeline_results['qualityReport'])
@@ -199,13 +240,17 @@ def get_analytics_quality(request):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_trends(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     return Response({
         'dailySpend': pipeline_results['dailySpend'],
         'monthlySpend': pipeline_results['monthlySpend'],
+        'topRegions': pipeline_results['topRegions'],
+        'topServices': pipeline_results['topServices'],
+        'providerSpend': pipeline_results['providerSpend'],
     })
 
 # @desc    Get provider cost share
@@ -213,8 +258,9 @@ def get_analytics_trends(request):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_providers(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     return Response(pipeline_results['providerSpend'])
@@ -224,8 +270,9 @@ def get_analytics_providers(request):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_services(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     return Response(pipeline_results['topServices'])
@@ -235,8 +282,9 @@ def get_analytics_services(request):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_correlation(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     return Response(pipeline_results['correlation'])
@@ -246,8 +294,8 @@ def get_analytics_correlation(request):
 # @access  Private (Super Admin)
 @api_view(['GET'])
 def get_analytics_export(request):
-    authorize_user(request)
-    records = get_billing_records()
+    user_payload = authorize_user(request)
+    records = get_billing_records(user_payload.get('id'))
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     cleaned_records = pipeline_results['cleanedRecords']

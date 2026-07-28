@@ -1,68 +1,86 @@
 const fs = require('fs');
 const csv = require('csv-parser');
 
-const REQUIRED_HEADERS = ['date', 'service', 'cost', 'region', 'usage_type', 'provider'];
+const normalizeHeader = (h) => {
+  return h.trim().toLowerCase().replace(/[\s\-_]/g, '');
+};
 
-const validateBillingCSV = (filePath) => {
+const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
   return new Promise((resolve, reject) => {
     const results = [];
     const errors = [];
-    let headers = null;
     let lineCount = 0;
 
-    const stream = fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('headers', (hdrList) => {
-        headers = hdrList.map(h => h.trim().toLowerCase());
+    const readStream = fs.createReadStream(filePath);
+    const parser = readStream.pipe(csv());
+
+    parser
+      .on('headers', (rawHeaders) => {
+        const normHeaders = rawHeaders.map(normalizeHeader);
         
-        // Check for missing headers
-        const missing = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+        // Flexible column mapping
+        const hasDate = normHeaders.some(h => ['date', 'timestamp', 'time', 'day', 'datetime'].includes(h));
+        const hasService = normHeaders.some(h => ['service', 'servicename', 'product', 'resource', 'servicecode'].includes(h));
+        const hasCost = normHeaders.some(h => ['cost', 'spend', 'amount', 'totalcost', 'unblendedcost'].includes(h));
+        
+        const missing = [];
+        if (!hasDate) missing.push('date');
+        if (!hasService) missing.push('service');
+        if (!hasCost) missing.push('cost');
+
         if (missing.length > 0) {
-          errors.push(`Missing required columns: ${missing.join(', ')}`);
-          stream.destroy();
-          resolve({ isValid: false, errors, records: [] });
+          errors.push(`Missing required columns: ${missing.join(', ')}. Found: ${rawHeaders.join(', ')}`);
+          readStream.on('close', () => {
+            resolve({ isValid: false, errors, records: [] });
+          });
+          readStream.destroy();
         }
       })
       .on('data', (row) => {
         lineCount++;
         
-        // Check if row has data
-        if (Object.keys(row).length === 0 || Object.values(row).every(v => v === '')) {
-          errors.push(`Row ${lineCount}: Empty record detected.`);
+        // Skip empty rows
+        if (Object.keys(row).length === 0 || Object.values(row).every(v => !v || v.trim() === '')) {
           return;
         }
 
-        const dateVal = row['date'] || row['Date'];
-        const serviceVal = row['service'] || row['Service'];
-        const costVal = row['cost'] || row['Cost'];
-        const regionVal = row['region'] || row['Region'];
-        const usageTypeVal = row['usage_type'] || row['Usage_type'] || row['Usage Type'] || row['usageType'];
-        const providerVal = row['provider'] || row['Provider'];
+        // Normalize keys for lookups
+        const normalizedRow = {};
+        Object.keys(row).forEach(k => {
+          normalizedRow[normalizeHeader(k)] = row[k];
+        });
 
-        // Validate values presence
-        if (!dateVal || !serviceVal || !costVal || !regionVal || !usageTypeVal || !providerVal) {
-          errors.push(`Row ${lineCount}: Missing required fields. Got [Date: ${dateVal}, Service: ${serviceVal}, Cost: ${costVal}, Provider: ${providerVal}]`);
+        const dateVal = normalizedRow['date'] || normalizedRow['timestamp'] || normalizedRow['time'] || normalizedRow['day'];
+        const serviceVal = normalizedRow['service'] || normalizedRow['servicename'] || normalizedRow['product'] || normalizedRow['resource'] || 'Compute';
+        const costVal = normalizedRow['cost'] || normalizedRow['spend'] || normalizedRow['amount'] || normalizedRow['totalcost'] || normalizedRow['unblendedcost'];
+        const regionVal = normalizedRow['region'] || normalizedRow['location'] || normalizedRow['zone'] || 'us-east-1';
+        const usageTypeVal = normalizedRow['usagetype'] || normalizedRow['type'] || normalizedRow['usage'] || 'StandardUsage';
+        const providerVal = normalizedRow['provider'] || normalizedRow['cloud'] || normalizedRow['platform'] || defaultProvider;
+
+        // Validate essential fields presence
+        if (!dateVal || !costVal) {
+          errors.push(`Row ${lineCount}: Missing Date or Cost value.`);
           return;
         }
 
-        // Validate provider enum
-        const provider = providerVal.trim().toLowerCase();
+        // Validate provider
+        let provider = (providerVal || defaultProvider).trim().toLowerCase();
         if (!['aws', 'azure', 'gcp'].includes(provider)) {
-          errors.push(`Row ${lineCount}: Invalid provider "${providerVal}". Allowed values are: aws, azure, gcp.`);
-          return;
+          provider = (defaultProvider || 'aws').toLowerCase();
         }
 
         // Validate date format
         const dateObj = new Date(dateVal);
         if (isNaN(dateObj.getTime())) {
-          errors.push(`Row ${lineCount}: Invalid date format "${dateVal}". Provide a valid date string (e.g. YYYY-MM-DD).`);
+          errors.push(`Row ${lineCount}: Invalid date format "${dateVal}".`);
           return;
         }
 
         // Validate cost is numeric
-        const cost = Number(costVal.trim().replace('$', '').replace(/,/g, ''));
+        const cleanCostStr = String(costVal).trim().replace('$', '').replace(/,/g, '');
+        const cost = Number(cleanCostStr);
         if (isNaN(cost) || cost < 0) {
-          errors.push(`Row ${lineCount}: Cost "${costVal}" must be a valid non-negative number.`);
+          errors.push(`Row ${lineCount}: Invalid cost amount "${costVal}".`);
           return;
         }
 
@@ -73,24 +91,30 @@ const validateBillingCSV = (filePath) => {
           region: regionVal.trim(),
           usageType: usageTypeVal.trim(),
           cost,
-          accountId: row['account_id'] || row['accountId'] || row['Account ID'] || 'N/A',
+          accountId: normalizedRow['accountid'] || normalizedRow['account'] || 'N/A',
         });
       })
       .on('end', () => {
-        if (lineCount === 0) {
-          errors.push('The CSV file is empty.');
-          resolve({ isValid: false, errors, records: [] });
-          return;
-        }
+        readStream.on('close', () => {
+          if (lineCount === 0 || results.length === 0) {
+            errors.push('The CSV file contains no valid data rows.');
+            resolve({ isValid: false, errors, records: [] });
+            return;
+          }
 
-        if (errors.length > 0) {
-          resolve({ isValid: false, errors: errors.slice(0, 50), records: [] }); // Limit errors list
-        } else {
-          resolve({ isValid: true, errors: [], records: results });
-        }
+          if (errors.length > 0 && results.length === 0) {
+            resolve({ isValid: false, errors: errors.slice(0, 50), records: [] });
+          } else {
+            // Success: return validated records
+            resolve({ isValid: true, errors: [], records: results });
+          }
+        });
+        readStream.destroy();
       })
       .on('error', (err) => {
-        reject(err);
+        readStream.on('close', () => {
+          resolve({ isValid: false, errors: [err.message], records: [] });
+        });
       });
   });
 };

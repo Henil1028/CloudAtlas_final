@@ -5,9 +5,9 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const { analyticsLimiter, heavyEdaLimiter, exportLimiter } = require('../middleware/rateLimiter');
 const AuditLog = require('../models/AuditLog');
 
-// All analytics routes require authentication & Super Admin role
+// All analytics routes require authentication & role authorization
 router.use(protect);
-router.use(authorize('super_admin'));
+router.use(authorize('super_admin', 'admin', 'user'));
 
 const DJANGO_URL = 'http://localhost:8000/api/analytics';
 

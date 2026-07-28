@@ -11,6 +11,8 @@ const {
   getSummary,
   getServices,
   getProviders,
+  getUploadedFiles,
+  deleteUploadedFile,
 } = require('../controllers/billingController');
 
 // All routes here require active user authentication session
@@ -21,12 +23,16 @@ router.get('/summary', getSummary);
 router.get('/providers', getProviders);
 router.get('/services', getServices);
 
+// Uploaded file history routes
+router.get('/files', getUploadedFiles);
+router.delete('/files/:id', deleteUploadedFile);
+
 // General data list routes
 router.get('/', getBillingData);
 router.get('/:id', getBillingDetail);
 
-// Ingestion upload - strictly limited to Super Admins & governed by upload rate limiters
-router.post('/upload', authorize('super_admin'), uploadLimiter, upload.single('file'), uploadCSV);
+// Ingestion upload - limited to Super Admins, Admins & Users, governed by upload rate limiters
+router.post('/upload', authorize('super_admin', 'admin', 'user'), uploadLimiter, upload.single('file'), uploadCSV);
 
 // Delete record - strictly limited to Super Admins
 router.delete('/:id', authorize('super_admin'), deleteBillingRecord);

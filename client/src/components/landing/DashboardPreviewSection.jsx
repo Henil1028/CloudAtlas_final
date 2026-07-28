@@ -7,16 +7,16 @@ export const DashboardPreviewSection = () => {
   const { token } = useAuth();
 
   return (
-    <section id="dashboard-preview" className="relative py-24 bg-navy-deep overflow-hidden">
+    <section id="dashboard-preview" className="relative py-24 overflow-hidden" style={{ backgroundColor: 'var(--color-navy-dark)' }}>
       {/* Background Orbs */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gold/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#0066FF]/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Interactive Console</span>
+          <span className="text-xs font-semibold text-[#00D4FF] uppercase tracking-widest">Interactive Console</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mt-2">
             Dynamic FinOps Dashboard
           </h2>
@@ -28,7 +28,7 @@ export const DashboardPreviewSection = () => {
         {/* Dashboard Frame */}
         <div className="glass-card rounded-2xl border border-white/5 shadow-2xl p-6 sm:p-8 mb-10 overflow-hidden relative">
           
-          <div className="absolute -inset-0.5 bg-gradient-to-tr from-primary/10 to-gold/10 rounded-2xl blur-[8px] opacity-25 z-0 pointer-events-none" />
+          <div className="absolute -inset-0.5 bg-gradient-to-tr from-primary/15 to-primary-hover/10 rounded-2xl blur-[8px] opacity-25 z-0 pointer-events-none" />
 
           {/* Console Header */}
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-white/5 pb-6 mb-6 relative z-10">
@@ -57,7 +57,7 @@ export const DashboardPreviewSection = () => {
             </div>
 
             {/* Card 2: Predicted Spend */}
-            <div className="p-5 rounded-xl bg-primary/5 border border-primary/10 relative overflow-hidden group hover:border-primary/20 transition-all">
+            <div className="p-5 rounded-xl bg-primary/5 border border-primary/15 relative overflow-hidden group hover:border-primary/30 transition-all">
               <div className="flex justify-between items-start">
                 <p className="text-xs font-bold text-primary uppercase tracking-wider">Forecasted Spend</p>
                 <TrendingUp className="h-5 w-5 text-primary" />
@@ -126,7 +126,7 @@ export const DashboardPreviewSection = () => {
         <div className="flex justify-center">
           <Link
             to={token ? '/dashboard' : '/login'}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-orange-600 px-8 py-4 text-base font-bold text-white hover:opacity-95 shadow-lg shadow-primary/20 glow-button transition-all"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary-hover px-8 py-4 text-base font-bold text-white hover:opacity-95 shadow-lg shadow-primary/25 glow-button transition-all"
           >
             Explore Dashboard
             <ArrowRight className="h-5 w-5" />

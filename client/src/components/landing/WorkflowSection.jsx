@@ -48,14 +48,14 @@ export const WorkflowSection = () => {
   ];
 
   return (
-    <section className="relative py-24 bg-navy-dark overflow-hidden">
+    <section className="relative py-24 overflow-hidden" style={{ backgroundColor: 'var(--color-navy-dark)' }}>
       {/* Background orbs */}
-      <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-[#00D4FF]/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <div className="text-center max-w-3xl mx-auto mb-20">
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Pipeline</span>
+          <span className="text-xs font-semibold text-[#00D4FF] uppercase tracking-widest">Pipeline</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mt-2">
             Data Pipeline & Forecast Workflow
           </h2>
@@ -72,7 +72,7 @@ export const WorkflowSection = () => {
               <div key={index} className="relative pl-10 sm:pl-16 group">
                 
                 {/* Timeline node */}
-                <div className="absolute left-[-21px] top-1 flex h-10 w-10 items-center justify-center rounded-xl bg-navy-deep border border-white/10 text-primary group-hover:border-primary/50 group-hover:bg-primary group-hover:text-white transition-all shadow-lg">
+                <div className="absolute left-[-21px] top-1 flex h-10 w-10 items-center justify-center rounded-xl bg-[#020C1B] border border-white/10 text-primary group-hover:border-primary/50 group-hover:bg-primary group-hover:text-white transition-all shadow-lg">
                   <IconComp className="h-5 w-5" />
                 </div>
 

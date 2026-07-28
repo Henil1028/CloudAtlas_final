@@ -1,11 +1,20 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Navbar } from '../components/common/Navbar';
-import { Footer } from '../components/common/Footer';
+import { ConsoleLayout } from '../components/console/ConsoleLayout';
+import { PageHeader } from '../components/console/PageHeader';
 import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database } from 'lucide-react';
 import api from '../services/api';
 
 export const UploadPage = () => {
+  const [theme, setTheme] = useState('neon-noir-theme');
+
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem('console-theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
   const [provider, setProvider] = useState('aws');
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -103,6 +112,11 @@ export const UploadPage = () => {
       setSuccess(true);
       setInsertedCount(response.data.recordsInserted);
       setFile(null);
+      
+      // Auto-redirect to predictions page to check forecast results
+      setTimeout(() => {
+        navigate('/predictions');
+      }, 2000);
     } catch (err) {
       setProgress(0);
       const data = err.response?.data;
@@ -117,31 +131,21 @@ export const UploadPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-navy-dark flex flex-col grid-bg text-white">
-      <Navbar />
+    <ConsoleLayout title="Ingest Billing Data">
+      <PageHeader
+        title="Ingest Billing Logs"
+        subtitle="Upload multi-cloud billing log sheets for machine learning analytics and forecasting"
+        icon={Upload}
+        breadcrumb={['CloudAtlas AI', 'Data', 'Ingest Logs']}
+      />
 
-      <div className="pt-28 pb-16 flex-grow mx-auto max-w-4xl w-full px-4 relative z-10">
-        
-        {/* Back navigation */}
-        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary mb-8 group transition-colors">
-          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-          Back to Dashboard
-        </Link>
+      <div className="mx-auto max-w-4xl w-full py-6 relative z-10">
 
         {/* Upload Container */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Instructions Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <div>
-              <span className="text-xs font-semibold text-primary uppercase tracking-widest">FinOps Ingestion</span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5">
-                Ingest Billing Logs
-              </h1>
-              <p className="text-gray-400 text-sm mt-3 leading-relaxed">
-                Ingested billing logs will be parsed, validated, and normalized before being routed to the XGBoost machine learning engine.
-              </p>
-            </div>
 
             {/* Ingestion Rules */}
             <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
@@ -152,7 +156,7 @@ export const UploadPage = () => {
               
               <ul className="text-xs text-gray-400 space-y-2.5 list-disc pl-4">
                 <li>Files must be in **CSV** format.</li>
-                <li>Maximum file size limit: **50 MB**.</li>
+                <li>Maximum file size limit: **2 GB**.</li>
                 <li>Required columns:
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {['date', 'service', 'cost', 'region', 'usage_type', 'provider'].map((col) => (
@@ -225,7 +229,7 @@ export const UploadPage = () => {
                         onClick={() => setProvider(p)}
                         className={`py-3.5 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
                           provider === p
-                            ? 'bg-primary/10 border-primary text-primary shadow-lg shadow-primary/10'
+                            ? 'bg-[#06B6D4]/10 border-[#06B6D4] text-[#06B6D4] shadow-lg shadow-[#06B6D4]/10'
                             : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
                         }`}
                       >
@@ -253,11 +257,11 @@ export const UploadPage = () => {
                     onClick={triggerFileInput}
                     className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-12 px-6 text-center cursor-pointer transition-all duration-300 ${
                       dragActive
-                        ? 'border-primary bg-primary/5'
-                        : 'border-white/10 bg-white/[0.01] hover:border-primary/40 hover:bg-white/[0.02]'
+                        ? 'border-[#06B6D4] bg-[#06B6D4]/5'
+                        : 'border-white/10 bg-white/[0.01] hover:border-[#8B5CF6]/40 hover:bg-white/[0.02]'
                     }`}
                   >
-                    <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-primary mb-4">
+                    <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-[#06B6D4] mb-4">
                       <Upload className="h-6 w-6" />
                     </div>
 
@@ -274,7 +278,7 @@ export const UploadPage = () => {
                 {file && (
                   <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+                      <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-[#06B6D4]/10 text-[#06B6D4] shrink-0">
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
@@ -299,15 +303,15 @@ export const UploadPage = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-gray-400 font-semibold flex items-center gap-1.5">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#06B6D4]" />
                         Analyzing & mapping records...
                       </span>
-                      <span className="text-primary font-bold">{progress}%</span>
+                      <span className="text-[#06B6D4] font-bold">{progress}%</span>
                     </div>
                     <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
                       <div
                         style={{ width: `${progress}%` }}
-                        className="bg-gradient-to-r from-primary to-orange-600 h-full rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-[#22C55E] via-[#06B6D4] to-[#8B5CF6] h-full rounded-full transition-all duration-300"
                       />
                     </div>
                   </div>
@@ -317,7 +321,7 @@ export const UploadPage = () => {
                 <button
                   type="submit"
                   disabled={!file || uploading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-orange-600 py-4 text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed glow-button transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#22C55E] via-[#06B6D4] to-[#8B5CF6] py-4 text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed glow-button transition-all cursor-pointer"
                 >
                   {uploading ? 'Ingesting Data...' : 'Begin Ingestion Pipeline'}
                 </button>
@@ -329,9 +333,7 @@ export const UploadPage = () => {
         </div>
 
       </div>
-
-      <Footer />
-    </div>
+    </ConsoleLayout>
   );
 };
 export default UploadPage;

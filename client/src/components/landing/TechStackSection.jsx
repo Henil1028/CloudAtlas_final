@@ -17,7 +17,7 @@ export const TechStackSection = () => {
     {
       category: 'Backend Layer',
       icon: Server,
-      color: 'text-gold bg-gold/10 border-gold/20',
+      color: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
       items: [
         { name: 'Node.js', version: 'V20 LTS Runtime' },
         { name: 'Express.js', version: 'HTTP API Service' },
@@ -29,7 +29,7 @@ export const TechStackSection = () => {
     {
       category: 'AI / Model Layer',
       icon: Brain,
-      color: 'text-green-400 bg-green-400/10 border-green-400/20',
+      color: 'text-gold bg-gold/10 border-gold/20',
       items: [
         { name: 'Python', version: 'Model Dev Environment' },
         { name: 'Django / Pandas', version: 'Data Prep Pipeline' },
@@ -41,7 +41,7 @@ export const TechStackSection = () => {
   ];
 
   return (
-    <section id="technology" className="relative py-24 bg-navy-deep overflow-hidden">
+    <section id="technology" className="relative py-24 overflow-hidden" style={{ backgroundColor: '#020C1B' }}>
       {/* Background orbs */}
       <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 

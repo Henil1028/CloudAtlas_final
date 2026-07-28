@@ -4,9 +4,9 @@ import { Activity, Mail } from 'lucide-react';
 
 export const Footer = () => {
   return (
-    <footer id="about" className="relative bg-navy-dark border-t border-white/5 pt-20 pb-10 overflow-hidden">
+    <footer id="about" className="relative border-t border-white/5 pt-20 pb-10 overflow-hidden" style={{ backgroundColor: '#0A0015' }}>
       {/* Background radial glow */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[250px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[250px] bg-[#7B2FFF]/8 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 pb-16">

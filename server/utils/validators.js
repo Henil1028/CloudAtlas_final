@@ -15,6 +15,12 @@ const validateRegister = [
     .isEmail()
     .withMessage('Please enter a valid email address')
     .normalizeEmail(),
+  body('phoneNumber')
+    .trim()
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .matches(/^\+?[1-9]\d{1,14}$/)
+    .withMessage('Please enter a valid phone number (E.164 format)'),
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -28,6 +34,15 @@ const validateRegister = [
     .withMessage('Password must contain at least one number')
     .matches(/[^a-zA-Z0-9]/)
     .withMessage('Password must contain at least one special character'),
+  body('confirmPassword')
+    .notEmpty()
+    .withMessage('Confirm password is required')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Confirm password must match password');
+      }
+      return true;
+    }),
   body('secretCode')
     .optional({ checkFalsy: true })
     .trim()
@@ -38,10 +53,7 @@ const validateLogin = [
   body('email')
     .trim()
     .notEmpty()
-    .withMessage('Email is required')
-    .isEmail()
-    .withMessage('Please enter a valid email address')
-    .normalizeEmail(),
+    .withMessage('Email or phone number is required'),
   body('password')
     .notEmpty()
     .withMessage('Password is required'),

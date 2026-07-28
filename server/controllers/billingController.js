@@ -21,7 +21,7 @@ const uploadCSV = async (req, res) => {
     }
 
     // Run CSV validation service
-    const validation = await validateBillingCSV(req.file.path);
+    const validation = await validateBillingCSV(req.file.path, provider.toLowerCase());
     if (!validation.isValid) {
       fs.unlinkSync(req.file.path);
       
@@ -61,6 +61,12 @@ const uploadCSV = async (req, res) => {
       status: 'success',
     });
 
+    // Backfill fileId on the newly inserted billing records
+    await BillingData.updateMany(
+      { _id: { $in: savedRecords.map((r) => r._id) } },
+      { $set: { fileId: uploadedFile._id } }
+    );
+
     // Save Security Audit Log
     await AuditLog.create({
       user: req.user.email,
@@ -94,9 +100,19 @@ const uploadCSV = async (req, res) => {
 // @access  Private
 const getBillingData = async (req, res) => {
   try {
-    const { provider, service, region, costMin, costMax, dateMin, dateMax, search, sortBy, sortOrder, page = 1, limit = 10 } = req.query;
+    const { provider, service, region, costMin, costMax, dateMin, dateMax, search, sortBy, sortOrder, page = 1, limit = 10, fileId, scope } = req.query;
 
-    const filter = {};
+    let filter = {};
+    if (fileId) {
+      filter.fileId = fileId;
+    } else if (scope !== 'all') {
+      const latestFile = await UploadedFile.findOne({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+      if (latestFile) {
+        filter.fileId = latestFile._id;
+      } else if (!['super_admin', 'admin'].includes(req.user.role)) {
+        filter.uploadedBy = req.user._id;
+      }
+    }
 
     // Apply filters
     if (provider) {
@@ -212,8 +228,29 @@ const deleteBillingRecord = async (req, res) => {
 // @access  Private
 const getSummary = async (req, res) => {
   try {
-    // To support consistent fallback, load all records matching filters or full database
-    const records = await BillingData.find({});
+    const { fileId, scope } = req.query;
+    let filter = {};
+
+    if (fileId) {
+      filter = { fileId };
+    } else if (scope === 'all' && ['super_admin', 'admin'].includes(req.user.role)) {
+      filter = {};
+    } else {
+      // Target latest uploaded file for the user to ensure exact 1550/1500 dataset metrics
+      const latestFile = await UploadedFile.findOne({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+      if (latestFile) {
+        filter = { fileId: latestFile._id };
+      } else {
+        const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
+        filter = isAdmin ? {} : { uploadedBy: req.user._id };
+      }
+    }
+
+    let records = await BillingData.find(filter);
+    if (records.length === 0 && (filter.fileId || filter.$or)) {
+      const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
+      records = await BillingData.find(isAdmin ? {} : { uploadedBy: req.user._id });
+    }
 
     if (records.length === 0) {
       return res.json({
@@ -303,8 +340,9 @@ const getSummary = async (req, res) => {
 // @access  Private
 const getServices = async (req, res) => {
   try {
-    // If in memory fallback or database, fetch unique services list
-    const records = await BillingData.find({});
+    const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
+    const filter = isAdmin ? {} : { uploadedBy: req.user._id };
+    const records = await BillingData.find(filter);
     const services = [...new Set(records.map(r => r.service))].sort();
     res.json(services);
   } catch (error) {
@@ -318,12 +356,62 @@ const getServices = async (req, res) => {
 // @access  Private
 const getProviders = async (req, res) => {
   try {
-    const records = await BillingData.find({});
+    const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
+    const filter = isAdmin ? {} : { uploadedBy: req.user._id };
+    const records = await BillingData.find(filter);
     const providers = [...new Set(records.map(r => r.provider))].sort();
     res.json(providers);
   } catch (error) {
     console.error('Get Providers Error:', error);
     res.status(500).json({ message: 'Server error retrieving unique providers list' });
+  }
+};
+
+// @desc    Get uploaded file history for current user
+// @route   GET /api/billing/files
+// @access  Private
+const getUploadedFiles = async (req, res) => {
+  try {
+    // Super Admins and Admins see all uploaded files; regular users see only their own
+    const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
+    const filter = isAdmin ? {} : { uploadedBy: req.user._id };
+    const files = await UploadedFile.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json({ files });
+  } catch (error) {
+    console.error('Get Files Error:', error);
+    res.status(500).json({ message: 'Server error retrieving uploaded files' });
+  }
+};
+
+// @desc    Delete an uploaded file and all its billing records
+// @route   DELETE /api/billing/files/:id
+// @access  Private
+const deleteUploadedFile = async (req, res) => {
+  try {
+    const fileRecord = await UploadedFile.findByIdAndDelete(req.params.id);
+    if (!fileRecord) {
+      return res.status(404).json({ message: 'File record not found' });
+    }
+
+    // Cascade: remove all billing records associated with this file's ID
+    await BillingData.deleteMany({ fileId: fileRecord._id });
+
+    // Log deletion
+    await AuditLog.create({
+      user: req.user.email,
+      ipAddress: req.ip || req.connection.remoteAddress || '127.0.0.1',
+      action: 'Dataset Deleted',
+      fileName: fileRecord.filename,
+      provider: fileRecord.provider,
+      recordCount: fileRecord.recordCount,
+    });
+
+    res.json({ message: 'Dataset and all associated billing records removed', id: req.params.id });
+  } catch (error) {
+    console.error('Delete File Error:', error);
+    res.status(500).json({ message: 'Server error deleting dataset' });
   }
 };
 
@@ -335,4 +423,6 @@ module.exports = {
   getSummary,
   getServices,
   getProviders,
+  getUploadedFiles,
+  deleteUploadedFile,
 };

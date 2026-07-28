@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Check, ArrowRight } from 'lucide-react';
+import { TiltCard } from '../common/TiltCard';
 
 export const PricingSection = () => {
   const { token } = useAuth();
@@ -36,7 +37,7 @@ export const PricingSection = () => {
       ],
       isPopular: true,
       buttonText: 'Go Pro Now',
-      color: 'border-primary/30 bg-primary/[0.03] shadow-lg shadow-primary/5',
+      color: 'border-primary/30 bg-primary/[0.03] shadow-lg shadow-primary/10',
     },
     {
       name: 'Enterprise Plan',
@@ -57,15 +58,16 @@ export const PricingSection = () => {
   ];
 
   return (
-    <section id="pricing" className="relative py-24 bg-navy-dark overflow-hidden">
+    <section id="pricing" className="relative py-24 overflow-hidden" style={{ backgroundColor: 'var(--color-navy-dark)' }}>
       {/* Background radial glow */}
       <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/3 right-1/4 w-[350px] h-[350px] bg-[#0066FF]/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Pricing Model</span>
+          <span className="text-xs font-semibold text-[#00D4FF] uppercase tracking-widest">Pricing Model</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mt-2">
             Flexible Plans for Any Scale
           </h2>
@@ -77,12 +79,12 @@ export const PricingSection = () => {
         {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan, index) => (
-            <div
+            <TiltCard
               key={index}
-              className={`glass-card p-6 sm:p-8 rounded-2xl border ${plan.color} relative overflow-hidden flex flex-col justify-between hover:border-white/15 transition-all duration-300`}
+              className={`glass-card p-6 sm:p-8 rounded-2xl border ${plan.color} relative overflow-hidden flex flex-col justify-between`}
             >
               {plan.isPopular && (
-                <span className="absolute top-4 right-4 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg shadow-primary/20">
+                <span className="absolute top-4 right-4 bg-gradient-to-r from-primary to-primary-hover text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg shadow-primary/30">
                   Most Popular
                 </span>
               )}
@@ -114,7 +116,7 @@ export const PricingSection = () => {
                   to={token ? '/dashboard' : '/login'}
                   className={`w-full flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold transition-all cursor-pointer ${
                     plan.isPopular
-                      ? 'bg-gradient-to-r from-primary to-orange-600 text-white hover:opacity-95 shadow-lg shadow-primary/20'
+                      ? 'bg-gradient-to-r from-primary to-primary-hover text-white hover:opacity-95 shadow-lg shadow-primary/25'
                       : 'bg-white/5 text-white hover:bg-white/10'
                   }`}
                 >
@@ -123,7 +125,7 @@ export const PricingSection = () => {
                 </Link>
               </div>
 
-            </div>
+            </TiltCard>
           ))}
         </div>
 

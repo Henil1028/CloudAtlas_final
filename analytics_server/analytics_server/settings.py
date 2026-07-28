@@ -15,6 +15,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'analytics',
+    'ml_service',
 ]
 
 MIDDLEWARE = [

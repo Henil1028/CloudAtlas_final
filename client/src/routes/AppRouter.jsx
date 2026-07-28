@@ -7,12 +7,23 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { UploadPage } from '../pages/UploadPage';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
+import { PredictionsPage } from '../pages/PredictionsPage';
+import { ModelTrainingPage } from '../pages/ModelTrainingPage';
+import { SimulatorPage } from '../pages/SimulatorPage';
+import { RiskAssessmentPage } from '../pages/RiskAssessmentPage';
+import { AnomalyDetectionPage } from '../pages/AnomalyDetectionPage';
+import { InsightEnginePage } from '../pages/InsightEnginePage';
+import { DatasetsPage } from '../pages/DatasetsPage';
+import { ReportsPage } from '../pages/ReportsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { UsersPage } from '../pages/UsersPage';
+import { AdminLoginPage } from '../pages/AdminLoginPage';
+import { AdminDashboardPage } from '../pages/AdminDashboardPage';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
 
 export const AppRouter = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   return (
     <Routes>
@@ -27,6 +38,25 @@ export const AppRouter = () => {
       <Route
         path="/register"
         element={token ? <Navigate to="/dashboard" replace /> : <RegisterPage />}
+      />
+
+      {/* Admin Portal Routes */}
+      <Route
+        path="/admin"
+        element={<Navigate to="/admin/login" replace />}
+      />
+      <Route
+        path="/admin/login"
+        element={token && user?.role === 'super_admin' ? <Navigate to="/admin/dashboard" replace /> : <AdminLoginPage />}
+      />
+
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        }
       />
 
       {/* Protected Pages */}
@@ -51,7 +81,7 @@ export const AppRouter = () => {
       <Route
         path="/upload"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute>
             <UploadPage />
           </ProtectedRoute>
         }
@@ -60,8 +90,98 @@ export const AppRouter = () => {
       <Route
         path="/analytics"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute>
             <AnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/predictions"
+        element={
+          <ProtectedRoute>
+            <PredictionsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/model-training"
+        element={
+          <ProtectedRoute>
+            <ModelTrainingPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/simulator"
+        element={
+          <ProtectedRoute>
+            <SimulatorPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/risk-assessment"
+        element={
+          <ProtectedRoute>
+            <RiskAssessmentPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/anomalies"
+        element={
+          <ProtectedRoute>
+            <AnomalyDetectionPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/insights"
+        element={
+          <ProtectedRoute>
+            <InsightEnginePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/datasets"
+        element={
+          <ProtectedRoute>
+            <DatasetsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

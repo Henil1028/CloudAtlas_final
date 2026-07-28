@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema(
         'Please provide a valid email address',
       ],
     },
+    phoneNumber: {
+      type: String,
+      required: [true, 'Phone number is required'],
+      trim: true,
+    },
     password: {
       type: String,
       required: [true, 'Password is required'],
@@ -30,10 +35,38 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: {
-        values: ['super_admin'],
+        values: ['super_admin', 'admin', 'user'],
         message: '{VALUE} is not a valid role',
       },
-      default: 'super_admin',
+      default: 'user',
+    },
+    resetPasswordOtp: {
+      type: String,
+      default: undefined,
+    },
+    resetPasswordOtpExpires: {
+      type: Date,
+      default: undefined,
+    },
+    registrationOtp: {
+      type: String,
+      default: undefined,
+    },
+    registrationOtpExpires: {
+      type: Date,
+      default: undefined,
+    },
+    registrationOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: false,
+    },
+    resetPasswordOtpAttempts: {
+      type: Number,
+      default: 0,
     },
   },
   {
@@ -72,30 +105,28 @@ const User = mongoose.model('User', userSchema);
 const inMemoryDb = [];
 
 const seedInMemoryAdmins = async () => {
+  // Prevent duplicate seeding
+  if (inMemoryDb.some((u) => u.role === 'super_admin')) return;
+
   const salt = await bcrypt.genSalt(12);
   const hash1 = await bcrypt.hash('CloudAtlasAdmin2026!', salt);
-  const hash2 = await bcrypt.hash('CloudAtlasManager2026!', salt);
 
   inMemoryDb.push(
     {
       _id: 'mock-admin-1',
-      name: 'Super Admin One',
+      name: 'Super Admin',
       email: 'admin1@cloudatlas.ai',
+      phoneNumber: '9876543210',
       password: hash1,
       role: 'super_admin',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      _id: 'mock-admin-2',
-      name: 'Super Admin Two',
-      email: 'admin2@cloudatlas.ai',
-      password: hash2,
-      role: 'super_admin',
+      isActive: true,
+      registrationOtpAttempts: 0,
+      resetPasswordOtpAttempts: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
   );
+  console.log('📦 In-memory database seeded with 1 Super Admin account');
 };
 seedInMemoryAdmins().catch((err) => console.error('Seed error:', err));
 
@@ -106,8 +137,14 @@ class MockQuery {
   select() {
     return this;
   }
-  then(onResolve) {
-    return Promise.resolve(this.result).then(onResolve);
+  lean() {
+    return this;
+  }
+  then(onResolve, onReject) {
+    return Promise.resolve(this.result).then(onResolve, onReject);
+  }
+  catch(onReject) {
+    return Promise.resolve(this.result).catch(onReject);
   }
 }
 
@@ -116,14 +153,53 @@ class MockUserModel {
     Object.assign(this, data);
   }
 
-  static findOne({ email }) {
-    const user = inMemoryDb.find((u) => u.email === email.toLowerCase());
+  static find(query = {}) {
+    const users = inMemoryDb.map((user) => ({
+      ...user,
+      toObject: function () {
+        const copy = { ...this };
+        delete copy.password;
+        return copy;
+      },
+      toJSON: function () {
+        const copy = { ...this };
+        delete copy.password;
+        return copy;
+      },
+    }));
+    return new MockQuery(users);
+  }
+
+  static findOne(query) {
+    if (!query) return new MockQuery(null);
+
+    const user = inMemoryDb.find((u) => {
+      if (query.role && u.role === query.role) return true;
+      if (query.email && u.email === query.email.toLowerCase()) return true;
+      if (query._id && String(u._id) === String(query._id)) return true;
+      if (query.$or) {
+        return query.$or.some((cond) => {
+          if (cond.email && u.email === cond.email.toLowerCase()) return true;
+          if (cond.phoneNumber && u.phoneNumber === cond.phoneNumber) return true;
+          return false;
+        });
+      }
+      return false;
+    });
+
     if (!user) return new MockQuery(null);
 
     const userObj = {
       ...user,
       matchPassword: async function (enteredPassword) {
         return await bcrypt.compare(enteredPassword, this.password);
+      },
+      save: async function () {
+        const idx = inMemoryDb.findIndex(u => u._id === this._id);
+        if (idx !== -1) {
+          inMemoryDb[idx] = { ...this };
+        }
+        return this;
       },
       toObject: function () {
         const copy = { ...this };
@@ -167,8 +243,14 @@ class MockUserModel {
       _id: 'mock-id-' + Math.random().toString(36).substr(2, 9),
       name: data.name,
       email: data.email.toLowerCase(),
+      phoneNumber: data.phoneNumber,
       password: hashedPassword,
-      role: 'super_admin',
+      role: data.role || 'user',
+      isActive: data.isActive !== undefined ? data.isActive : true,
+      registrationOtp: data.registrationOtp,
+      registrationOtpExpires: data.registrationOtpExpires,
+      registrationOtpAttempts: 0,
+      resetPasswordOtpAttempts: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -189,6 +271,38 @@ class MockUserModel {
       },
     };
     return userObj;
+  }
+
+  static async findByIdAndUpdate(id, updateData, options = {}) {
+    const idx = inMemoryDb.findIndex(u => String(u._id) === String(id));
+    if (idx === -1) return null;
+    const updatedUser = {
+      ...inMemoryDb[idx],
+      ...updateData,
+      updatedAt: new Date()
+    };
+    inMemoryDb[idx] = updatedUser;
+    return {
+      ...updatedUser,
+      toObject: function () {
+        const copy = { ...this };
+        delete copy.password;
+        return copy;
+      },
+      toJSON: function () {
+        const copy = { ...this };
+        delete copy.password;
+        return copy;
+      }
+    };
+  }
+
+  static async findByIdAndDelete(id) {
+    const idx = inMemoryDb.findIndex(u => String(u._id) === String(id));
+    if (idx === -1) return null;
+    const deletedUser = inMemoryDb[idx];
+    inMemoryDb.splice(idx, 1);
+    return deletedUser;
   }
 }
 

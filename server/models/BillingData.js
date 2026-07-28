@@ -49,6 +49,11 @@ const billingDataSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    fileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'UploadedFile',
+      default: null,
+    },
     uploadDate: {
       type: Date,
       default: Date.now,
@@ -164,6 +169,11 @@ class MockBillingModel {
   static find(filter = {}) {
     let list = [...inMemoryBillingDb];
     
+    // Filter by uploadedBy user ownership
+    if (filter.uploadedBy) {
+      list = list.filter(b => String(b.uploadedBy) === String(filter.uploadedBy));
+    }
+    
     // Filter by provider
     if (filter.provider) {
       list = list.filter(b => b.provider === filter.provider.toLowerCase());
@@ -252,18 +262,34 @@ class MockBillingModel {
     if (Object.keys(filter).length === 0) {
       inMemoryBillingDb.length = 0;
     } else {
-      // Find matching items to delete
-      // Currently deleteMany in our controller is used to delete records by uploadedBy or _id
-      if (filter.uploadedBy) {
-        let i = inMemoryBillingDb.length;
-        while (i--) {
-          if (String(inMemoryBillingDb[i].uploadedBy) === String(filter.uploadedBy)) {
-            inMemoryBillingDb.splice(i, 1);
-          }
-        }
+      let i = inMemoryBillingDb.length;
+      while (i--) {
+        const rec = inMemoryBillingDb[i];
+        let match = true;
+        if (filter.uploadedBy && String(rec.uploadedBy) !== String(filter.uploadedBy)) match = false;
+        if (filter.fileId && String(rec.fileId) !== String(filter.fileId)) match = false;
+        if (filter.fileName && rec.fileName !== filter.fileName) match = false;
+        if (match) inMemoryBillingDb.splice(i, 1);
       }
     }
     return { deletedCount: prevCount - inMemoryBillingDb.length };
+  }
+
+  static async updateMany(filter = {}, update = {}) {
+    let updatedCount = 0;
+    const setData = update.$set || {};
+    const ids = filter._id?.$in?.map(String) || null;
+
+    inMemoryBillingDb.forEach((rec, idx) => {
+      const matchId = ids ? ids.includes(String(rec._id)) : true;
+      const matchUploadedBy = filter.uploadedBy ? String(rec.uploadedBy) === String(filter.uploadedBy) : true;
+      if (matchId && matchUploadedBy) {
+        inMemoryBillingDb[idx] = { ...rec, ...setData };
+        updatedCount++;
+      }
+    });
+
+    return { modifiedCount: updatedCount };
   }
 
   static async findByIdAndDelete(id) {

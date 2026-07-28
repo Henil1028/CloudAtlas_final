@@ -42,6 +42,14 @@ app.use('/api/billing', billingRoutes);
 const analyticsRoutes = require('./routes/analyticsRoutes');
 app.use('/api/analytics', analyticsRoutes);
 
+// ML Python Microservice Gateway
+const mlRoutes = require('./routes/mlRoutes');
+app.use('/api/ml', mlRoutes);
+
+// AI Chat Assistant Route
+const chatRoutes = require('./routes/chatRoutes');
+app.use('/api/chat', chatRoutes);
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -59,7 +67,7 @@ app.use((req, res, next) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ message: 'File size exceeds the 50 MB limit. Please split the CSV.' });
+    return res.status(400).json({ message: 'File size exceeds the 2 GB limit. Please split the CSV.' });
   }
   if (err.message && err.message.includes('Only CSV file uploads')) {
     return res.status(400).json({ message: err.message });
@@ -77,30 +85,127 @@ const PORT = process.env.PORT || 5000;
 connectDB().then(async () => {
   try {
     const User = require('./models/User');
-    const admins = [
-      {
-        name: 'Super Admin One',
+    let adminUser = await User.findOne({ email: 'admin1@cloudatlas.ai' });
+    if (!adminUser) {
+      await User.create({
+        name: 'Super Admin',
         email: 'admin1@cloudatlas.ai',
+        phoneNumber: '9876543210',
         password: 'CloudAtlasAdmin2026!',
         role: 'super_admin',
-      },
-      {
-        name: 'Super Admin Two',
-        email: 'admin2@cloudatlas.ai',
-        password: 'CloudAtlasManager2026!',
-        role: 'super_admin',
-      },
-    ];
+        isActive: true,
+      });
+      console.log('👤 Seeded Single Super Admin: admin1@cloudatlas.ai');
+    } else {
+      adminUser.password = 'CloudAtlasAdmin2026!';
+      adminUser.role = 'super_admin';
+      adminUser.isActive = true;
+      await adminUser.save();
+      console.log('👤 Synchronized Super Admin credentials for: admin1@cloudatlas.ai');
+    }
+  } catch (error) {
+    console.error('❌ Failed to seed Super Admin 1:', error.message);
+  }
 
-    for (const admin of admins) {
-      const exists = await User.findOne({ email: admin.email });
-      if (!exists) {
-        await User.create(admin);
-        console.log(`👤 Seeded Super Admin: ${admin.email}`);
+  // Seed Super Admin 2: Neel Panchal
+  try {
+    const User = require('./models/User');
+    let neelUser = await User.findOne({ email: 'npanchal1812@gmail.com' });
+    if (!neelUser) {
+      await User.create({
+        name: 'Neel Panchal',
+        email: 'npanchal1812@gmail.com',
+        phoneNumber: '9876543211',
+        password: 'Neel#1812',
+        role: 'super_admin',
+        isActive: true,
+      });
+      console.log('👤 Seeded Super Admin: npanchal1812@gmail.com');
+    } else {
+      neelUser.password = 'Neel#1812';
+      neelUser.role = 'super_admin';
+      neelUser.isActive = true;
+      await neelUser.save();
+      console.log('👤 Synchronized Super Admin credentials for: npanchal1812@gmail.com');
+    }
+  } catch (error) {
+    console.error('❌ Failed to seed Super Admin 2:', error.message);
+  }
+
+  // Seed Mock Billing Data and Files if collection is empty
+  try {
+    const BillingData = require('./models/BillingData');
+    const UploadedFile = require('./models/UploadedFile');
+    const User = require('./models/User');
+
+    const adminUser = await User.findOne({ email: 'admin1@cloudatlas.ai' });
+    const neelUser = await User.findOne({ email: 'npanchal1812@gmail.com' });
+    const primaryAdmin = neelUser || adminUser;
+
+    if (primaryAdmin) {
+      const count = await BillingData.countDocuments({});
+      if (count === 0) {
+        console.log('🔄 MongoDB BillingData is empty. Seeding mock cloud datasets...');
+
+        // 1. Create file upload log histories
+        const filesToSeed = [
+          { filename: 'aws_q1_billing.csv', provider: 'aws', recordCount: 40, size: 154820, uploadedBy: primaryAdmin._id, status: 'success' },
+          { filename: 'azure_prod_compute.csv', provider: 'azure', recordCount: 40, size: 124500, uploadedBy: primaryAdmin._id, status: 'success' },
+          { filename: 'gcp_bigquery_exports.csv', provider: 'gcp', recordCount: 40, size: 189400, uploadedBy: primaryAdmin._id, status: 'success' }
+        ];
+
+        const createdFiles = await UploadedFile.insertMany(filesToSeed);
+
+        // 2. Generate and Insert 120 billing records across AWS, Azure, GCP
+        const providers = ['aws', 'azure', 'gcp'];
+        const services = {
+          aws: ['EC2', 'RDS', 'S3', 'Lambda', 'DynamoDB'],
+          azure: ['Virtual Machines', 'SQL Database', 'Blob Storage', 'Functions', 'Cosmos DB'],
+          gcp: ['Compute Engine', 'Cloud SQL', 'Cloud Storage', 'Cloud Functions', 'BigQuery'],
+        };
+        const regions = {
+          aws: ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-southeast-1'],
+          azure: ['East US', 'West US 2', 'West Europe', 'Southeast Asia'],
+          gcp: ['us-central1', 'us-east4', 'europe-west1', 'asia-east1'],
+        };
+        const usageTypes = ['ComputeInstance', 'DatabaseStorage', 'DataTransfer', 'APIRequest', 'IPAddress'];
+
+        const now = new Date();
+        const records = [];
+
+        for (let i = 0; i < 120; i++) {
+          const provider = providers[i % providers.length];
+          const providerServices = services[provider];
+          const service = providerServices[Math.floor(Math.random() * providerServices.length)];
+          const region = regions[provider][Math.floor(Math.random() * regions[provider].length)];
+          const usageType = usageTypes[Math.floor(Math.random() * usageTypes.length)];
+          const matchingFile = createdFiles.find(f => f.provider === provider);
+
+          const date = new Date();
+          date.setDate(now.getDate() - Math.floor(Math.random() * 90));
+          const cost = Math.round((Math.random() * 850 + 2.5) * 100) / 100;
+
+          records.push({
+            provider,
+            date,
+            service,
+            region,
+            usageType,
+            cost,
+            currency: 'USD',
+            accountId: `${100000000000 + (i % 3) * 555555}`,
+            uploadedBy: primaryAdmin._id,
+            fileId: matchingFile ? matchingFile._id : null,
+            uploadDate: new Date()
+          });
+        }
+
+        await BillingData.insertMany(records);
+        console.log('✅ Successfully seeded 120 mock billing records into MongoDB!');
       }
     }
   } catch (error) {
-    console.error('❌ Failed to seed Super Admins:', error.message);
+    console.error('❌ Failed to seed billing database:', error.message);
   }
 
   app.listen(PORT, () => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertOctagon, RefreshCw, Landmark, HelpCircle } from 'lucide-react';
+import { TiltCard } from '../common/TiltCard';
 
 export const ProblemSection = () => {
   const problems = [
@@ -30,14 +31,14 @@ export const ProblemSection = () => {
   ];
 
   return (
-    <section id="solutions" className="relative py-24 bg-navy-dark overflow-hidden">
+    <section id="solutions" className="relative py-24 overflow-hidden" style={{ backgroundColor: 'var(--color-navy-dark)' }}>
       {/* Subtle floating radial glow */}
       <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[90px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">The Challenge</span>
+          <span className="text-xs font-semibold text-[#FF0080] uppercase tracking-widest">The Challenge</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mt-2">
             Why Cloud Costs Become Unpredictable
           </h2>
@@ -51,9 +52,9 @@ export const ProblemSection = () => {
           {problems.map((prob, index) => {
             const IconComp = prob.icon;
             return (
-              <div
+              <TiltCard
                 key={index}
-                className={`glass-card p-6 sm:p-8 rounded-2xl border ${prob.color} transition-all duration-300 hover:scale-[1.01] hover:border-white/10`}
+                className={`glass-card p-6 sm:p-8 rounded-2xl border ${prob.color}`}
               >
                 <div className="flex items-center gap-4 mb-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-inherit shrink-0">
@@ -62,7 +63,7 @@ export const ProblemSection = () => {
                   <h3 className="text-lg sm:text-xl font-bold text-white">{prob.title}</h3>
                 </div>
                 <p className="text-sm text-gray-400 leading-relaxed">{prob.description}</p>
-              </div>
+              </TiltCard>
             );
           })}
         </div>

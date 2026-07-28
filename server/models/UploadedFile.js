@@ -131,6 +131,13 @@ class MockUploadedFileModel {
     return new MockQuery(item || null);
   }
 
+  static findByIdAndDelete(id) {
+    const idx = inMemoryFilesDb.findIndex(f => String(f._id) === String(id));
+    if (idx === -1) return new MockQuery(null);
+    const [removed] = inMemoryFilesDb.splice(idx, 1);
+    return new MockQuery(removed);
+  }
+
   static async create(data) {
     const record = {
       _id: 'mock-file-' + Math.random().toString(36).substr(2, 9),

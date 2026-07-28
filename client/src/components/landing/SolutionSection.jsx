@@ -26,14 +26,14 @@ export const SolutionSection = () => {
   ];
 
   return (
-    <section className="relative py-24 bg-navy-deep overflow-hidden">
-      {/* Background orange sunset glow */}
+    <section className="relative py-24 overflow-hidden" style={{ backgroundColor: 'var(--color-navy-dark)' }}>
+      {/* Background primary glow */}
       <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-semibold text-primary uppercase tracking-widest">Our Approach</span>
+          <span className="text-xs font-semibold text-[#00D4FF] uppercase tracking-widest">Our Approach</span>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mt-2">
             How CloudAtlas Solves It
           </h2>
@@ -49,7 +49,7 @@ export const SolutionSection = () => {
             return (
               <div
                 key={index}
-                className="glass-card p-6 rounded-2xl border border-white/5 hover:border-primary/20 hover:translate-y-[-4px] shadow-lg shadow-navy-dark/20 transition-all duration-300 group"
+                className="glass-card p-6 rounded-2xl border border-white/5 hover:border-primary/30 hover:translate-y-[-4px] shadow-lg shadow-[#020C1B]/40 transition-all duration-300 group"
               >
                 <div className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary mb-5 group-hover:scale-110 transition-transform">
                   <IconComp className="h-6 w-6" />
