@@ -17,7 +17,6 @@ const NAV_SECTIONS = [
     label: 'AI Models',
     items: [
       { name: 'Cost Prediction', path: '/predictions', icon: TrendingUp },
-      { name: 'Cost Driver Analysis', path: '/analytics', icon: BarChart3 },
       { name: 'Budget Simulator', path: '/simulator', icon: Sliders },
       { name: 'Risk Classification', path: '/risk-assessment', icon: ShieldAlert },
       { name: 'Anomaly Detection', path: '/anomalies', icon: Zap },

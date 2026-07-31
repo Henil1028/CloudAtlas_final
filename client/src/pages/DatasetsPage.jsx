@@ -4,6 +4,7 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { PageHeader } from '../components/console/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
 
 const PROVIDER_COLORS = { AWS: '#F59E0B', Azure: '#3B82F6', GCP: '#22C55E', Oracle: '#EF4444' };
 const PROVIDER_LABELS = { aws: 'AWS', azure: 'Azure', gcp: 'GCP' };
@@ -28,7 +29,9 @@ export const DatasetsPage = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [runningId, setRunningId] = useState(null);
   const navigate = useNavigate();
+  const { lastUploadFileId, notifyUpload } = useDataContext();
 
   const [datasets, setDatasets] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -70,8 +73,12 @@ export const DatasetsPage = () => {
     try {
       await api.delete(`/billing/files/${id}`);
       // Remove from local state only after server confirms deletion
-      setDatasets(prev => prev.filter(d => d.id !== id));
+      const updated = datasets.filter(d => d.id !== id);
+      setDatasets(updated);
       setDeleteId(null);
+      // Auto-switch to next remaining CSV or zero/empty state if all deleted
+      const nextFileId = updated.length > 0 ? updated[0].id : null;
+      notifyUpload(nextFileId);
     } catch (err) {
       console.error('Delete failed:', err);
       // Show error but still close modal
@@ -79,6 +86,29 @@ export const DatasetsPage = () => {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleRunDataset = (ds) => {
+    setRunningId(ds.id);
+    notifyUpload(ds.id);
+    setTimeout(() => {
+      setRunningId(null);
+      navigate('/predictions');
+    }, 200);
+  };
+
+  const handleDownloadDataset = (ds) => {
+    api.get(`/analytics/export?fileId=${ds.id}&format=csv`, { responseType: 'blob' })
+      .then(res => {
+        const blob = new Blob([res.data], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = ds.name || 'cloudatlas_billing_export.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      })
+      .catch(err => console.error('Download error:', err));
   };
 
 
@@ -231,7 +261,12 @@ export const DatasetsPage = () => {
                         <FileText size={14} color="#3B82F6" />
                       </div>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#F1F5F9', fontFamily: 'Inter' }}>{ds.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#F1F5F9', fontFamily: 'Inter' }}>{ds.name}</span>
+                          {(lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) && (
+                            <span className="badge-success" style={{ fontSize: '9px', padding: '1px 6px' }}>Active</span>
+                          )}
+                        </div>
                         <div style={{ fontSize: '11px', color: '#475569', fontFamily: 'Inter' }}>
                           {ds.missingVals > 0 ? `${ds.missingVals} missing values` : 'No issues'}
                           {ds.duplicates > 0 ? ` · ${ds.duplicates} duplicates` : ''}
@@ -284,21 +319,28 @@ export const DatasetsPage = () => {
                         <Eye size={13} />
                       </button>
                       <button
-                        title="Run Again"
-                        onClick={() => navigate('/predictions')}
+                        title={lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id) ? "Currently Active Dataset" : "Run AI Models on this Dataset"}
+                        onClick={() => handleRunDataset(ds)}
                         style={{
                           width: '30px', height: '30px', borderRadius: '7px',
-                          background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)',
-                          color: '#8B5CF6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.15)' : 'rgba(124,58,237,0.1)',
+                          border: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(124,58,237,0.2)',
+                          color: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? '#22C55E' : '#8B5CF6',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.15s',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.2)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(124,58,237,0.1)'}
+                        onMouseEnter={e => e.currentTarget.style.background = (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.25)' : 'rgba(124,58,237,0.2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.15)' : 'rgba(124,58,237,0.1)'}
                       >
-                        <Play size={13} />
+                        {runningId === ds.id ? (
+                          <RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        ) : (
+                          <Play size={13} />
+                        )}
                       </button>
                       <button
-                        title="Download"
+                        title="Download CSV"
+                        onClick={() => handleDownloadDataset(ds)}
                         style={{
                           width: '30px', height: '30px', borderRadius: '7px',
                           background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',

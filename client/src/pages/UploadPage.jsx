@@ -4,6 +4,7 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { PageHeader } from '../components/console/PageHeader';
 import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database } from 'lucide-react';
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
 
 export const UploadPage = () => {
   const [theme, setTheme] = useState('neon-noir-theme');
@@ -29,6 +30,7 @@ export const UploadPage = () => {
 
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const { notifyUpload } = useDataContext();
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -112,6 +114,10 @@ export const UploadPage = () => {
       setSuccess(true);
       setInsertedCount(response.data.recordsInserted);
       setFile(null);
+
+      // Notify all pages to re-fetch with the new file's data
+      const newFileId = response.data.file?._id;
+      notifyUpload(newFileId);
       
       // Auto-redirect to predictions page to check forecast results
       setTimeout(() => {

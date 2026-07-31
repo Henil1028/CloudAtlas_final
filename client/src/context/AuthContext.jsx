@@ -60,7 +60,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };  const register = async (name, email, phoneNumber, password, confirmPassword, secretCode) => {
+  };
+
+  const register = async (name, email, phoneNumber, password, confirmPassword, secretCode) => {
     setLoading(true);
     setError(null);
     try {
@@ -129,7 +131,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      await resendRegistrationOtp(email);
+      const data = await resendRegistrationOtp(email);
+      return data;
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to resend code.';
       setError(msg);

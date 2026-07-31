@@ -8,6 +8,8 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { ChartCard } from '../components/console/ChartCard';
 import { PageHeader } from '../components/console/PageHeader';
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
+import { EmptyState } from '../components/console/EmptyState';
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 const riskScore = 62;
@@ -39,63 +41,119 @@ const heatmapData = [
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
 const riskColor = (score) => {
-  if (score >= 70) return '#EF4444';
-  if (score >= 50) return '#F59E0B';
-  return '#22C55E';
+  if (score >= 70) return '#EF4444';   // High   — Red
+  if (score >= 40) return '#F59E0B';   // Moderate — Amber
+  return '#22C55E';                    // Low    — Green
 };
 
 const riskLabel = (score) => {
   if (score >= 70) return 'High';
-  if (score >= 50) return 'Medium';
+  if (score >= 40) return 'Moderate';
   return 'Low';
 };
 
 // ─── Gauge component ──────────────────────────────────────────────────────────
 const RiskGauge = ({ score }) => {
-  const angle = -135 + (score / 100) * 270;
-  const color = riskColor(score);
+  const safeScore = Math.min(100, Math.max(0, Number(score) || 0));
+  // Needle angle: -135deg (0 score) to +135deg (100 score) across 270deg total arc
+  const angle = -135 + (safeScore / 100) * 270;
+  const color = riskColor(safeScore);
+  const arcLength = 251.2;
 
   return (
-    <div style={{ position: 'relative', width: '200px', height: '120px', margin: '0 auto' }}>
-      <svg viewBox="0 0 200 120" width="200" height="120">
-        {/* Background arc */}
-        <path d="M 20 100 A 80 80 0 1 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" strokeLinecap="round" />
-        {/* Colored arc */}
+    <div style={{ position: 'relative', width: '220px', height: '135px', margin: '0 auto' }}>
+      <svg viewBox="0 0 200 120" width="220" height="135">
+        <defs>
+          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#22C55E" />
+            <stop offset="50%" stopColor="#F59E0B" />
+            <stop offset="100%" stopColor="#EF4444" />
+          </linearGradient>
+        </defs>
+        {/* Track background with full spectrum gradient */}
+        <path d="M 20 100 A 80 80 0 1 1 180 100" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="16" strokeLinecap="butt" />
+        <path d="M 20 100 A 80 80 0 1 1 180 100" fill="none" stroke="url(#gaugeGradient)" strokeWidth="16" strokeLinecap="butt" opacity={0.35} />
+        {/* Active progress arc fill - strokeLinecap="butt" stops EXACTLY at needle score */}
         <path
           d="M 20 100 A 80 80 0 1 1 180 100"
           fill="none"
           stroke={color}
-          strokeWidth="14"
-          strokeLinecap="round"
-          strokeDasharray={`${(score / 100) * 251.2} 251.2`}
-          opacity={0.85}
-          style={{ filter: `drop-shadow(0 0 6px ${color}80)` }}
+          strokeWidth="16"
+          strokeLinecap="butt"
+          strokeDasharray={`${(safeScore / 100) * arcLength} ${arcLength}`}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out, stroke 0.4s ease', filter: `drop-shadow(0 0 8px ${color}A0)` }}
         />
         {/* Tick marks */}
         {[0, 25, 50, 75, 100].map((v, i) => {
-          const tickAngle = -135 + (v / 100) * 270;
+          const tickAngle = 135 + (v / 100) * 270;
           const rad = (tickAngle * Math.PI) / 180;
           const cx = 100 + 80 * Math.cos(rad);
           const cy = 100 + 80 * Math.sin(rad);
-          return <circle key={i} cx={cx} cy={cy} r="3" fill="rgba(255,255,255,0.15)" />;
+          return <circle key={i} cx={cx} cy={cy} r="3" fill="#94A3B8" opacity={0.8} />;
         })}
-        {/* Needle */}
+        {/* Gauge Needle Pointer with distinct Arrow Head */}
         {(() => {
-          const rad = (angle * Math.PI) / 180;
-          const nx = 100 + 65 * Math.cos(rad);
-          const ny = 100 + 65 * Math.sin(rad);
+          const needleAngle = 135 + (safeScore / 100) * 270;
+          const rad = (needleAngle * Math.PI) / 180;
+          // Line ends at inner radius 56
+          const lx = 100 + 56 * Math.cos(rad);
+          const ly = 100 + 56 * Math.sin(rad);
+          // Arrow tip touches arc inner radius (80 - 8 = 72)
+          const tx = 100 + 71.5 * Math.cos(rad);
+          const ty = 100 + 71.5 * Math.sin(rad);
+
+          // Arrow wing perpendicular vector
+          const px = -Math.sin(rad) * 6;
+          const py = Math.cos(rad) * 6;
+
+          const p1 = `${tx},${ty}`;
+          const p2 = `${lx + px},${ly + py}`;
+          const p3 = `${lx - px},${ly - py}`;
+
           return (
-            <line x1="100" y1="100" x2={nx} y2={ny} stroke="#F1F5F9" strokeWidth="2.5" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 4px rgba(241,245,249,0.5))' }} />
+            <g style={{ transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+              <line x1="100" y1="100" x2={lx} y2={ly} stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.9))' }} />
+              {/* Triangular Arrow Head pointing directly onto score arc */}
+              <polygon points={`${p1} ${p2} ${p3}`} fill="#FFFFFF" stroke={color} strokeWidth="1.5" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
+            </g>
           );
         })()}
-        <circle cx="100" cy="100" r="5" fill="#F1F5F9" style={{ filter: 'drop-shadow(0 0 4px rgba(241,245,249,0.5))' }} />
+        <circle cx="100" cy="100" r="6" fill="#F8FAFC" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.6))' }} />
+        <circle cx="100" cy="100" r="2.5" fill="#0F172A" />
       </svg>
-      <div style={{ position: 'absolute', bottom: '0', left: 0, right: 0, textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Space Grotesk, monospace', fontWeight: 800, fontSize: '32px', color, lineHeight: 1 }}>
-          {score}
-        </div>
-        <div style={{ fontSize: '11px', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>
-          {riskLabel(score)} Risk
+      <div style={{ position: 'absolute', bottom: '0px', left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+        <div style={{
+          padding: '6px 20px',
+          borderRadius: '9999px',
+          background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
+          border: `1px solid ${color}60`,
+          boxShadow: `0 4px 20px -2px ${color}35`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}>
+          <span style={{
+            fontFamily: 'Space Grotesk, monospace',
+            fontWeight: 800,
+            fontSize: '26px',
+            color: '#FFFFFF',
+            lineHeight: 1,
+          }}>
+            {safeScore}
+          </span>
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 800,
+            color,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            padding: '3px 8px',
+            borderRadius: '9999px',
+            background: `${color}18`,
+            border: `1px solid ${color}30`,
+          }}>
+            {riskLabel(safeScore)} Risk
+          </span>
         </div>
       </div>
     </div>
@@ -108,28 +166,62 @@ export const RiskAssessmentPage = () => {
 
   const [dataSummary, setDataSummary] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const isInitialLoad = React.useRef(true);
+  const { lastUploadTime, lastUploadFileId } = useDataContext();
 
   useEffect(() => {
-    api.get('/billing/summary')
+    const fileQuery = lastUploadFileId ? `?fileId=${lastUploadFileId}` : '';
+    api.get(`/billing/summary${fileQuery}`)
       .then(res => {
         setDataSummary(res.data);
-        setDataLoading(false);
+        if (isInitialLoad.current) {
+          setDataLoading(false);
+          isInitialLoad.current = false;
+        }
       })
       .catch(err => {
         console.error(err);
-        setDataLoading(false);
+        if (isInitialLoad.current) {
+          setDataLoading(false);
+          isInitialLoad.current = false;
+        }
       });
-  }, []);
+  }, [lastUploadTime, lastUploadFileId]);
 
   const dynamicProviderRisk = React.useMemo(() => {
     if (!dataSummary || !dataSummary.providerSpend) return providerRisk;
     const spend = dataSummary.providerSpend;
     const total = (spend.aws || 0) + (spend.azure || 0) + (spend.gcp || 0);
     if (total === 0) return providerRisk;
+
+    const awsCost = spend.aws || 0;
+    const azureCost = spend.azure || 0;
+    const gcpCost = spend.gcp || 0;
+
+    // Calculate share of total spend per provider
+    const awsShare = awsCost > 0 ? (awsCost / total) * 100 : 0;
+    const azureShare = azureCost > 0 ? (azureCost / total) * 100 : 0;
+    const gcpShare = gcpCost > 0 ? (gcpCost / total) * 100 : 0;
+
     return [
-      { provider: 'AWS', risk: Math.min(95, Math.max(15, Math.round(((spend.aws || 0) / total) * 100 + 20))), color: '#F59E0B' },
-      { provider: 'Azure', risk: Math.min(95, Math.max(15, Math.round(((spend.azure || 0) / total) * 100 + 15))), color: '#3B82F6' },
-      { provider: 'GCP', risk: Math.min(95, Math.max(15, Math.round(((spend.gcp || 0) / total) * 100 + 10))), color: '#22C55E' },
+      {
+        provider: 'AWS',
+        risk: awsCost > 0 ? Math.min(95, Math.max(30, Math.round(awsShare * 0.6 + 30))) : 0,
+        spend: awsCost,
+        color: '#F59E0B'
+      },
+      {
+        provider: 'Azure',
+        risk: azureCost > 0 ? Math.min(95, Math.max(30, Math.round(azureShare * 0.6 + 30))) : 0,
+        spend: azureCost,
+        color: '#3B82F6'
+      },
+      {
+        provider: 'GCP',
+        risk: gcpCost > 0 ? Math.min(95, Math.max(30, Math.round(gcpShare * 0.6 + 30))) : 0,
+        spend: gcpCost,
+        color: '#22C55E'
+      },
     ];
   }, [dataSummary]);
 
@@ -142,7 +234,7 @@ export const RiskAssessmentPage = () => {
     return services.slice(0, 7).map((s) => {
       const sharePct = (s.cost / totalCost) * 100;
       const risk = Math.min(95, Math.max(22, Math.round(sharePct * 1.8 + 30)));
-      const status = risk >= 70 ? 'high' : risk >= 45 ? 'medium' : 'low';
+      const status = risk >= 70 ? 'high' : risk >= 40 ? 'medium' : 'low';
       const formattedSpend = s.cost >= 1000 ? `$${Math.round(s.cost / 1000)}K` : `$${Math.round(s.cost)}`;
       return {
         dept: s.service,
@@ -154,26 +246,45 @@ export const RiskAssessmentPage = () => {
   }, [dataSummary]);
 
   const dynamicOverallScore = React.useMemo(() => {
-    if (dynamicDepartmentRisk.length === 0) return 62;
-    const sum = dynamicDepartmentRisk.reduce((acc, d) => acc + d.risk, 0);
-    return Math.round(sum / dynamicDepartmentRisk.length);
-  }, [dynamicDepartmentRisk]);
+    if (!dataSummary || !dataSummary.serviceSpend || dataSummary.serviceSpend.length === 0) return 62;
+    const topCost = dataSummary.serviceSpend[0]?.cost || 0;
+    const concentrationPct = (topCost / (dataSummary.totalCost || 1)) * 100;
+    return Math.min(95, Math.max(20, Math.round(concentrationPct * 1.2 + 25)));
+  }, [dataSummary]);
 
-  const dynamicHeatmapData = React.useMemo(() => {
+  const dynamicHeatmap = React.useMemo(() => {
     if (!dataSummary || !dataSummary.serviceSpend || dataSummary.serviceSpend.length === 0) {
-      return heatmapData;
+      return { heatmapRows: heatmapData, monthHeaders: months };
     }
-    const topServices = dataSummary.serviceSpend.slice(0, 5).map(s => s.service);
-    const monthsList = ['jan', 'feb', 'mar', 'apr', 'may', 'jun'];
-    return topServices.map(srv => {
-      const row = { service: srv };
-      monthsList.forEach((m, idx) => {
-        // Compute pseudo-historical variance based on service index and month
-        const val = Math.min(96, Math.max(18, Math.round(40 + (idx * 9) + (srv.length * 3) % 35)));
-        row[m] = val;
+    const topServices = dataSummary.serviceSpend.slice(0, 5);
+    const totalCost = dataSummary.totalCost || 1;
+
+    // Deriving month names from dailySpend timestamps
+    let monthHeaders = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    if (dataSummary.dailySpend && dataSummary.dailySpend.length > 0) {
+      const uniqueMonths = Array.from(new Set(dataSummary.dailySpend.map(d => {
+        const dt = new Date(d.date);
+        return dt.toLocaleDateString('en-US', { month: 'short' });
+      })));
+      if (uniqueMonths.length > 0) {
+        monthHeaders = uniqueMonths.slice(-6);
+      }
+    }
+
+    const heatmapRows = topServices.map((srv, sIdx) => {
+      const row = { service: srv.service };
+      const sharePct = (srv.cost / totalCost) * 100;
+      const baseRisk = Math.min(92, Math.max(25, Math.round(sharePct * 1.6 + 32)));
+
+      monthHeaders.forEach((m, idx) => {
+        const monthVar = Math.sin(idx + sIdx) * 12;
+        const val = Math.min(95, Math.max(20, Math.round(baseRisk + monthVar)));
+        row[m.toLowerCase()] = val;
       });
       return row;
     });
+
+    return { heatmapRows, monthHeaders };
   }, [dataSummary]);
 
   if (dataLoading) {
@@ -199,22 +310,15 @@ export const RiskAssessmentPage = () => {
           iconColor="#F59E0B"
           breadcrumb={['CloudAtlas AI', 'AI Models', 'Risk Classification']}
         />
-        <div className="glass-card" style={{ padding: '40px', textAlign: 'center', marginTop: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <AlertTriangle size={48} color="#F59E0B" />
-          </div>
-          <h3 style={{ fontFamily: 'Outfit, sans-serif', color: '#F1F5F9', marginBottom: '8px', fontSize: '18px', fontWeight: 600 }}>No Data Available</h3>
-          <p style={{ fontSize: '14px', color: '#94A3B8', maxWidth: '500px', margin: '0 auto 20px', lineHeight: 1.6 }}>
-            Budget overrun and workload risk classification models require an active billing dataset to calculate department/provider risk scores.
-          </p>
-          <a href="/upload" style={{
-            display: 'inline-block', padding: '10px 20px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: '#fff',
-            textDecoration: 'none', fontWeight: 600, fontSize: '13px'
-          }}>
-            Ingest CSV Dataset
-          </a>
-        </div>
+        <EmptyState
+          title="Risk Classification"
+          kpis={[
+            { label: 'Overall Risk Score', value: '0 / 100' },
+            { label: 'High Risk Services', value: '0' },
+            { label: 'Medium Risk Services', value: '0' },
+            { label: 'Resolved / Low', value: '0' },
+          ]}
+        />
       </ConsoleLayout>
     );
   }
@@ -242,8 +346,8 @@ export const RiskAssessmentPage = () => {
           {/* KPI chips */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
             {[
-              { label: 'Risk Level', value: 'Medium', color: '#F59E0B' },
-              { label: 'Budget Status', value: 'At Risk', color: '#F59E0B' },
+              { label: 'Risk Level', value: riskLabel(dynamicOverallScore), color: riskColor(dynamicOverallScore) },
+              { label: 'Budget Status', value: dynamicOverallScore >= 70 ? 'High Exposure' : dynamicOverallScore >= 50 ? 'At Risk' : 'Healthy', color: riskColor(dynamicOverallScore) },
               { label: 'Model Confidence', value: '87.3%', color: '#7C3AED' },
               { label: 'Evaluated At', value: 'Just now', color: '#64748B' },
             ].map((item, i) => (
@@ -276,11 +380,11 @@ export const RiskAssessmentPage = () => {
                       boxShadow: `0 0 6px ${p.color}40`,
                     }} />
                   </div>
-                  <span style={{ width: '36px', fontSize: '12px', fontWeight: 700, color: riskColor(p.risk), fontFamily: 'Space Grotesk, monospace', textAlign: 'right' }}>
-                    {p.risk}
+                  <span style={{ width: '36px', fontSize: '12px', fontWeight: 700, color: p.spend === 0 ? '#64748B' : riskColor(p.risk), fontFamily: 'Space Grotesk, monospace', textAlign: 'right' }}>
+                    {p.spend === 0 ? '0' : p.risk}
                   </span>
-                  <span className={`badge-${p.risk >= 70 ? 'danger' : p.risk >= 50 ? 'warning' : 'success'}`}>
-                    {riskLabel(p.risk)}
+                  <span className={p.spend === 0 ? 'badge-neutral' : `badge-${p.risk >= 70 ? 'danger' : p.risk >= 50 ? 'warning' : 'success'}`}>
+                    {p.spend === 0 ? 'Inactive' : riskLabel(p.risk)}
                   </span>
                 </div>
               ))}
@@ -335,16 +439,16 @@ export const RiskAssessmentPage = () => {
             <thead>
               <tr>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', color: '#475569', fontFamily: 'Inter', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Service</th>
-                {months.map(m => (
+                {dynamicHeatmap.monthHeaders.map(m => (
                   <th key={m} style={{ padding: '8px 12px', textAlign: 'center', fontSize: '11px', color: '#475569', fontFamily: 'Inter', fontWeight: 600 }}>{m}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {dynamicHeatmapData.map((row, i) => (
+              {dynamicHeatmap.heatmapRows.map((row, i) => (
                 <tr key={i}>
                   <td style={{ padding: '8px 12px', fontSize: '13px', fontWeight: 500, color: '#CBD5E1', fontFamily: 'Inter' }}>{row.service}</td>
-                  {months.map(m => {
+                  {dynamicHeatmap.monthHeaders.map(m => {
                     const val = row[m.toLowerCase()];
                     const c = riskColor(val);
                     const alpha = val / 100;

@@ -8,6 +8,8 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { ChartCard } from '../components/console/ChartCard';
 import { PageHeader } from '../components/console/PageHeader';
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
+import { EmptyState } from '../components/console/EmptyState';
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 const shapData = [
@@ -80,18 +82,28 @@ export const AnalyticsPage = () => {
   const [liveServices, setLiveServices] = useState([]);
   const [liveRegions, setLiveRegions] = useState([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const isInitialLoad = React.useRef(true);
 
   const SERVICE_COLORS = ['#7C3AED', '#06B6D4', '#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#64748B'];
+  const { lastUploadTime } = useDataContext();
 
   React.useEffect(() => {
+    // Only show spinner on initial page visit, not on CSV upload refetch
+    if (!isInitialLoad.current) {
+      // silent background refresh — do NOT set loading states
+    }
+
     api.get('/billing/summary')
       .then(res => {
         setDataSummary(res.data);
-        setDataLoading(false);
+        if (isInitialLoad.current) setDataLoading(false);
+        else setDataLoading(false);
+        isInitialLoad.current = false;
       })
       .catch(err => {
         console.error(err);
         setDataLoading(false);
+        isInitialLoad.current = false;
       });
 
     api.get('/analytics/services')
@@ -110,7 +122,6 @@ export const AnalyticsPage = () => {
 
     api.get('/analytics/trends')
       .then(res => {
-        // Extract top regions from top regions array in trends API
         const topRegions = res.data?.topRegions || [];
         const mapped = topRegions.slice(0, 5).map(r => ({
           region: r.region,
@@ -120,7 +131,7 @@ export const AnalyticsPage = () => {
       })
       .catch(() => {})
       .finally(() => setAnalyticsLoading(false));
-  }, []);
+  }, [lastUploadTime]);
 
   if (dataLoading || analyticsLoading) {
     return (
@@ -146,22 +157,15 @@ export const AnalyticsPage = () => {
           iconColor="#06B6D4"
           breadcrumb={['CloudAtlas AI', 'AI Models', 'Cost Driver Analysis']}
         />
-        <div className="glass-card" style={{ padding: '40px', textAlign: 'center', marginTop: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <AlertTriangle size={48} color="#F59E0B" />
-          </div>
-          <h3 style={{ fontFamily: 'Outfit, sans-serif', color: '#F1F5F9', marginBottom: '8px', fontSize: '18px', fontWeight: 600 }}>No Data Available</h3>
-          <p style={{ fontSize: '14px', color: '#94A3B8', maxWidth: '500px', margin: '0 auto 20px', lineHeight: 1.6 }}>
-            Attrbution explainer models require an active billing dataset to analyze feature contributions, SHAP values, and service/region dimensions.
-          </p>
-          <a href="/upload" style={{
-            display: 'inline-block', padding: '10px 20px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: '#fff',
-            textDecoration: 'none', fontWeight: 600, fontSize: '13px'
-          }}>
-            Ingest CSV Dataset
-          </a>
-        </div>
+        <EmptyState
+          title="Cost Driver Analysis"
+          kpis={[
+            { label: 'Top Cost Driver', value: '—' },
+            { label: 'Top Service', value: '—' },
+            { label: 'Top Region', value: '—' },
+            { label: 'Total Records', value: '0' },
+          ]}
+        />
       </ConsoleLayout>
     );
   }

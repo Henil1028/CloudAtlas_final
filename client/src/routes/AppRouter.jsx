@@ -21,11 +21,13 @@ import { AdminLoginPage } from '../pages/AdminLoginPage';
 import { AdminDashboardPage } from '../pages/AdminDashboardPage';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../hooks/useAuth';
+import { DataContextProvider } from '../context/DataContext';
 
 export const AppRouter = () => {
   const { token, user } = useAuth();
 
   return (
+    <DataContextProvider>
     <Routes>
       {/* Public Pages */}
       <Route path="/" element={<LandingPage />} />
@@ -89,11 +91,7 @@ export const AppRouter = () => {
 
       <Route
         path="/analytics"
-        element={
-          <ProtectedRoute>
-            <AnalyticsPage />
-          </ProtectedRoute>
-        }
+        element={<Navigate to="/predictions" replace />}
       />
 
       <Route
@@ -189,5 +187,6 @@ export const AppRouter = () => {
       {/* 404 Catch-All */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </DataContextProvider>
   );
 };

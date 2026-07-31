@@ -87,7 +87,8 @@ def get_mock_ml_records():
 
 def load_billing_data():
     """
-    Connects to MongoDB and returns billing data as a Pandas DataFrame.
+    Connects to MongoDB and returns billing data as a Pandas DataFrame
+    filtered to the LATEST uploaded file so each CSV upload trains fresh models.
     If database connection fails, falls back to mock dataset.
     """
     mongo_uri = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/cloudatlas')
@@ -95,9 +96,18 @@ def load_billing_data():
         client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=1500)
         client.server_info() # Trigger connection check
         db = client['cloudatlas']
-        # Node collection is usually 'billingdatas'
+
+        # Find the latest uploaded file to scope training data
+        files_col = db['uploadedfiles']
+        latest_file = files_col.find_one({}, sort=[('createdAt', pymongo.DESCENDING)])
+
         collection = db['billingdatas']
-        records = list(collection.find())
+        if latest_file:
+            filter_dict = {'fileId': latest_file['_id']}
+        else:
+            filter_dict = {}
+
+        records = list(collection.find(filter_dict))
         
         if not records or len(records) == 0:
             print("MongoDB has no billing data. Falling back to mock data.")

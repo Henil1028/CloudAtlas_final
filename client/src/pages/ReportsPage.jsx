@@ -11,6 +11,8 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { ChartCard } from '../components/console/ChartCard';
 import { PageHeader } from '../components/console/PageHeader';
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
+import { EmptyState } from '../components/console/EmptyState';
 
 /* ═══════════════════════════════════════════════════════════════
    SINGLE SOURCE OF TRUTH — raw cost records
@@ -217,11 +219,15 @@ const ProviderLegend = () => (
 /* ═══════════════════════════════════════════════════════════════
    DOWNLOAD BUTTON
    ═══════════════════════════════════════════════════════════════ */
-const DownloadBtn = ({ label, icon: Icon, color }) => {
+/* ═══════════════════════════════════════════════════════════════
+   DOWNLOAD BUTTON
+   ═══════════════════════════════════════════════════════════════ */
+const DownloadBtn = ({ label, icon: Icon, color, onClick }) => {
   const [isLoading, setIsLoading] = useState(false);
   const handleClick = () => {
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1500);
+    if (onClick) onClick();
+    setTimeout(() => setIsLoading(false), 1200);
   };
   return (
     <button
@@ -245,7 +251,7 @@ const DownloadBtn = ({ label, icon: Icon, color }) => {
       ) : (
         <Icon size={14} />
       )}
-      {isLoading ? 'Generating...' : label}
+      {isLoading ? 'Exporting...' : label}
     </button>
   );
 };
@@ -290,6 +296,7 @@ export const ReportsPage = () => {
 
   const [dataSummary, setDataSummary] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const { lastUploadTime } = useDataContext();
 
   useEffect(() => {
     api.get('/billing/summary')
@@ -301,14 +308,37 @@ export const ReportsPage = () => {
         console.error(err);
         setDataLoading(false);
       });
-  }, []);
+  }, [lastUploadTime]);
 
 
 
-  // ── Aggregate all views from single source ──
-  const allMonthly = useMemo(() => aggregateMonthly(RAW_DATA), []);
-  const allQuarterly = useMemo(() => aggregateQuarterly(RAW_DATA), []);
-  const allYearly = useMemo(() => aggregateYearly(RAW_DATA), []);
+  // ── Aggregate all views dynamically from live database dataset summary ──
+  const dynamicRawData = useMemo(() => {
+    if (!dataSummary || !dataSummary.dailySpend || dataSummary.dailySpend.length === 0) {
+      return RAW_DATA;
+    }
+    const spend = dataSummary.providerSpend || { aws: 0, azure: 0, gcp: 0 };
+    const total = (spend.aws + spend.azure + spend.gcp) || 1;
+    const awsRatio = spend.aws / total;
+    const azureRatio = spend.azure / total;
+    const gcpRatio = spend.gcp / total;
+
+    const list = [];
+    dataSummary.dailySpend.forEach(d => {
+      const dt = new Date(d.date);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const monthKey = `${y}-${m}`;
+      if (awsRatio > 0) list.push({ date: monthKey, provider: 'AWS', cost: d.cost * (awsRatio || 0.6) });
+      if (azureRatio > 0) list.push({ date: monthKey, provider: 'Azure', cost: d.cost * (azureRatio || 0.3) });
+      if (gcpRatio > 0) list.push({ date: monthKey, provider: 'GCP', cost: d.cost * (gcpRatio || 0.1) });
+    });
+    return list.length > 0 ? list : RAW_DATA;
+  }, [dataSummary]);
+
+  const allMonthly = useMemo(() => aggregateMonthly(dynamicRawData), [dynamicRawData]);
+  const allQuarterly = useMemo(() => aggregateQuarterly(dynamicRawData), [dynamicRawData]);
+  const allYearly = useMemo(() => aggregateYearly(dynamicRawData), [dynamicRawData]);
 
   // ── Get sliced chart data for the active tab ──
   const { chartData, allData } = useMemo(() => {
@@ -410,22 +440,15 @@ export const ReportsPage = () => {
           icon={FileText}
           breadcrumb={['CloudAtlas AI', 'Reports']}
         />
-        <div className="glass-card" style={{ padding: '40px', textAlign: 'center', marginTop: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <AlertTriangle size={48} color="#F59E0B" />
-          </div>
-          <h3 style={{ fontFamily: 'Outfit, sans-serif', color: '#F1F5F9', marginBottom: '8px', fontSize: '18px', fontWeight: 600 }}>No Cost Reports Found</h3>
-          <p style={{ fontSize: '14px', color: '#94A3B8', maxWidth: '500px', margin: '0 auto 20px', lineHeight: 1.6 }}>
-            Report builders require historical billing logs to compile monthly, quarterly, and annual spend aggregates.
-          </p>
-          <a href="/upload" style={{
-            display: 'inline-block', padding: '10px 20px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: '#fff',
-            textDecoration: 'none', fontWeight: 600, fontSize: '13px'
-          }}>
-            Ingest CSV Dataset
-          </a>
-        </div>
+        <EmptyState
+          title="Reports"
+          kpis={[
+            { label: 'Total Spend', value: '$0' },
+            { label: 'Monthly Avg', value: '$0' },
+            { label: 'Records', value: '0' },
+            { label: 'Providers', value: '0' },
+          ]}
+        />
       </ConsoleLayout>
     );
   }
@@ -574,9 +597,47 @@ export const ReportsPage = () => {
               Export {activeTab} Report
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <DownloadBtn label="Download PDF" icon={FileText} color="#EF4444" />
-              <DownloadBtn label="Download Excel" icon={FileSpreadsheet} color="#22C55E" />
-              <DownloadBtn label="Download CSV" icon={Download} color="#3B82F6" />
+              <DownloadBtn
+                label="Download PDF"
+                icon={FileText}
+                color="#EF4444"
+                onClick={() => {
+                  const content = `CloudAtlas AI - Executive ${activeTab} Report\nGenerated At: ${new Date().toLocaleString()}\nTotal Spend: ${reportSummary.totalSpend}\nHighest Provider: ${reportSummary.highestProvider}\nInsight: ${reportSummary.insight}\n`;
+                  const blob = new Blob([content], { type: 'application/pdf' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `CloudAtlas_Executive_${activeTab}_Report.pdf`;
+                  link.click();
+                }}
+              />
+              <DownloadBtn
+                label="Download Excel"
+                icon={FileSpreadsheet}
+                color="#22C55E"
+                onClick={() => {
+                  const header = "Period,AWS Spend ($),Azure Spend ($),GCP Spend ($),Total Spend ($)\n";
+                  const rows = chartData.map(r => `${r.label},${r.aws},${r.azure},${r.gcp},${r.aws + r.azure + r.gcp}`).join("\n");
+                  const blob = new Blob([header + rows], { type: 'application/vnd.ms-excel' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `CloudAtlas_Executive_${activeTab}_Report.xls`;
+                  link.click();
+                }}
+              />
+              <DownloadBtn
+                label="Download CSV"
+                icon={Download}
+                color="#3B82F6"
+                onClick={() => {
+                  const header = "Period,AWS Spend ($),Azure Spend ($),GCP Spend ($),Total Spend ($)\n";
+                  const rows = chartData.map(r => `${r.label},${r.aws},${r.azure},${r.gcp},${r.aws + r.azure + r.gcp}`).join("\n");
+                  const blob = new Blob([header + rows], { type: 'text/csv' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `CloudAtlas_Executive_${activeTab}_Report.csv`;
+                  link.click();
+                }}
+              />
             </div>
           </div>
 

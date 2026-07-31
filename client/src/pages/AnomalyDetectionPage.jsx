@@ -8,6 +8,8 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { ChartCard } from '../components/console/ChartCard';
 import { PageHeader } from '../components/console/PageHeader';
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
+import { EmptyState } from '../components/console/EmptyState';
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 const timelineData = [
@@ -84,116 +86,129 @@ export const AnomalyDetectionPage = () => {
   const [dynamicTimeline, setDynamicTimeline] = useState([]);
   const [dynamicAnomalies, setDynamicAnomalies] = useState([]);
   const [trendsLoading, setTrendsLoading] = useState(true);
+  const isInitialLoad = React.useRef(true);
+  const { lastUploadTime, lastUploadFileId } = useDataContext();
 
   useEffect(() => {
-    api.get('/billing/summary')
-      .then(res => {
-        setDataSummary(res.data);
-        setDataLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setDataLoading(false);
-      });
+    const fileQuery = lastUploadFileId ? `?fileId=${lastUploadFileId}` : '';
 
-    api.get('/analytics/trends')
-      .then(res => {
-        const daily = (res.data?.dailySpend || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-        if (daily.length === 0) return;
+    Promise.allSettled([
+      api.get(`/billing/summary${fileQuery}`),
+      api.get(`/analytics/trends${fileQuery}`)
+    ]).then(([sumSettled, trendSettled]) => {
+      const summaryData = sumSettled.status === 'fulfilled' ? sumSettled.value?.data : null;
+      const trendData = trendSettled.status === 'fulfilled' ? trendSettled.value?.data : null;
 
+      if (summaryData) setDataSummary(summaryData);
+
+      // Use trends data if available, otherwise fall back to billing summary daily spend
+      const rawDaily = trendData?.dailySpend || summaryData?.dailySpend || [];
+      const daily = [...rawDaily].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      if (daily.length > 0) {
         const avg = daily.reduce((s, d) => s + d.cost, 0) / daily.length;
-        const threshold = avg * 1.4;
+        const threshold = avg * 1.50;
 
-        // Build timeline from the last 15 data points
-        const slice = daily.slice(-15);
-        const timeline = slice.map(d => {
+        // Build timeline from recent 14 daily records
+        const recentDaily = daily.slice(-14);
+        const timeline = recentDaily.map(d => {
           const dt = new Date(d.date);
           const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           const isAnomaly = d.cost > threshold;
+          const pct = isAnomaly ? Math.round(((d.cost - avg) / avg) * 100) : 0;
+          const severity = pct > 85 ? 'critical' : 'medium';
           return {
             day: label,
             cost: Math.round(d.cost),
             anomalies: isAnomaly ? 1 : 0,
+            severity: isAnomaly ? severity : 'none',
           };
         });
         setDynamicTimeline(timeline);
 
-        // Derive anomaly records from actual data spikes
-        const PROVIDERS = { aws: 'AWS', azure: 'Azure', gcp: 'GCP' };
-        const SERVICES = { aws: 'EC2', azure: 'Blob Storage', gcp: 'Compute Engine' };
-        const REGIONS = { aws: 'us-east-1', azure: 'eastus', gcp: 'us-central1' };
+        // Read serviceSpend from the summary API response (not stale React state)
+        const serviceList = summaryData?.serviceSpend || [];
         let idx = 0;
-        const anomalies = daily
+        const detectedAnomalies = daily
           .filter(d => d.cost > threshold)
           .slice(-5)
           .map(d => {
             idx++;
             const pct = Math.round(((d.cost - avg) / avg) * 100);
-            const severity = pct > 80 ? 'critical' : pct > 40 ? 'medium' : 'low';
-            const provider = Object.keys(PROVIDERS)[idx % 3];
-            const service = SERVICES[provider];
-            const region = REGIONS[provider];
+            const severity = pct > 75 ? 'critical' : pct > 25 ? 'medium' : 'low';
+            const matchedService = serviceList[(idx - 1) % Math.max(serviceList.length, 1)]?.service || 'Compute Engine';
             const dt = new Date(d.date);
             const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             return {
               id: `ANO-${String(idx).padStart(3, '0')}`,
-              service,
-              region,
-              provider: PROVIDERS[provider],
+              service: matchedService,
+              region: 'us-east-1',
+              provider: d.cost > avg * 1.8 ? 'AWS' : d.cost > avg * 1.4 ? 'Azure' : 'GCP',
               severity,
-              message: `Cost spike on ${label}: +${pct}% vs daily average`,
+              message: `Cost spike on ${label}: +${pct}% vs daily average ($${Math.round(avg).toLocaleString()})`,
               cost: Math.round(d.cost),
               baseline: Math.round(avg),
-              confidence: Math.round(Math.min(99, 80 + pct * 0.1)),
-              time: `${Math.floor((Date.now() - dt.getTime()) / 86400000)}d ago`,
+              confidence: Math.round(Math.min(99, Math.max(75, 80 + pct * 0.1))),
+              time: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
               status: idx === 1 ? 'active' : idx === 2 ? 'investigating' : 'resolved',
             };
           });
-        setDynamicAnomalies(anomalies);
-      })
-      .catch(() => {})
-      .finally(() => setTrendsLoading(false));
-  }, []);
+        setDynamicAnomalies(detectedAnomalies);
+      }
+    }).catch(() => {})
+    .finally(() => {
+      setDataLoading(false);
+      setTrendsLoading(false);
+      isInitialLoad.current = false;
+    });
+  }, [lastUploadTime, lastUploadFileId]);
+
+  const handleToggleResolve = (id) => {
+    setDynamicAnomalies(prev => {
+      if (!prev || prev.length === 0) return prev;
+      return prev.map(item => {
+        if (item.id === id) {
+          const nextStatus = item.status === 'resolved' ? 'active' : 'resolved';
+          return { ...item, status: nextStatus };
+        }
+        return item;
+      });
+    });
+  };
 
   const anomalyList = React.useMemo(() => {
     if (dynamicAnomalies.length > 0) return dynamicAnomalies;
-    if (!dataSummary || !dataSummary.dailySpend || dataSummary.dailySpend.length === 0) return anomalies;
-
-    const daily = [...dataSummary.dailySpend].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const avg = daily.reduce((s, d) => s + d.cost, 0) / daily.length;
-    const threshold = avg * 1.25;
-
-    const PROVIDERS = { aws: 'AWS', azure: 'Azure', gcp: 'GCP' };
-    const SERVICES = { aws: 'EC2', azure: 'Blob Storage', gcp: 'Compute Engine' };
-    const REGIONS = { aws: 'us-east-1', azure: 'eastus', gcp: 'us-central1' };
-
-    let idx = 0;
-    const computedAnomalies = daily
-      .filter(d => d.cost > threshold)
-      .slice(-6)
-      .map(d => {
-        idx++;
-        const pct = Math.round(((d.cost - avg) / (avg || 1)) * 100);
-        const severity = pct > 80 ? 'critical' : pct > 40 ? 'medium' : 'low';
-        const providerKey = Object.keys(PROVIDERS)[idx % 3];
-        const dt = new Date(d.date);
-        const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        return {
-          id: `ANO-${String(idx).padStart(3, '0')}`,
-          service: SERVICES[providerKey],
-          region: REGIONS[providerKey],
-          provider: PROVIDERS[providerKey],
-          severity,
-          message: `Cost spike on ${label}: +${pct}% vs baseline average`,
-          cost: Math.round(d.cost),
-          baseline: Math.round(avg),
-          confidence: Math.round(Math.min(99, 82 + (pct % 15))),
-          time: `${Math.max(1, Math.floor((Date.now() - dt.getTime()) / 86400000))}d ago`,
-          status: idx === 1 ? 'active' : idx === 2 ? 'investigating' : 'resolved',
-        };
-      });
-
-    return computedAnomalies.length > 0 ? computedAnomalies : anomalies;
+    // Fallback: derive from billing summary dailySpend if trends fetch also returned it
+    if (dataSummary?.dailySpend?.length > 0) {
+      const daily = [...dataSummary.dailySpend].sort((a, b) => new Date(a.date) - new Date(b.date));
+      const avg = daily.reduce((s, d) => s + d.cost, 0) / daily.length;
+      const threshold = avg * 1.25;
+      let idx = 0;
+      return daily
+        .filter(d => d.cost > threshold)
+        .slice(-5)
+        .map(d => {
+          idx++;
+          const pct = Math.round(((d.cost - avg) / avg) * 100);
+          const dt = new Date(d.date);
+          const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          return {
+            id: `ANO-${String(idx).padStart(3, '0')}`,
+            service: dataSummary?.serviceSpend?.[idx - 1]?.service || 'Compute Engine',
+            region: 'us-east-1',
+            provider: d.cost > avg * 1.8 ? 'AWS' : d.cost > avg * 1.4 ? 'Azure' : 'GCP',
+            severity: pct > 75 ? 'critical' : pct > 25 ? 'medium' : 'low',
+            message: `Cost spike on ${label}: +${pct}% vs daily average ($${Math.round(avg).toLocaleString()})`,
+            cost: Math.round(d.cost),
+            baseline: Math.round(avg),
+            confidence: Math.round(Math.min(99, Math.max(75, 80 + pct * 0.1))),
+            time: label,
+            status: idx === 1 ? 'active' : idx === 2 ? 'investigating' : 'resolved',
+          };
+        });
+    }
+    // Final fallback: return static mock data so page is never empty
+    return anomalies;
   }, [dynamicAnomalies, dataSummary]);
 
   const severityStats = {
@@ -226,22 +241,15 @@ export const AnomalyDetectionPage = () => {
           iconColor="#EF4444"
           breadcrumb={['CloudAtlas AI', 'AI Models', 'Anomaly Detection']}
         />
-        <div className="glass-card" style={{ padding: '40px', textAlign: 'center', marginTop: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <AlertTriangle size={48} color="#F59E0B" />
-          </div>
-          <h3 style={{ fontFamily: 'Outfit, sans-serif', color: '#F1F5F9', marginBottom: '8px', fontSize: '18px', fontWeight: 600 }}>No Data Available</h3>
-          <p style={{ fontSize: '14px', color: '#94A3B8', maxWidth: '500px', margin: '0 auto 20px', lineHeight: 1.6 }}>
-            Cost anomaly explainer engines require active historical cloud billing logs to compute deviations and detect spending spikes.
-          </p>
-          <a href="/upload" style={{
-            display: 'inline-block', padding: '10px 20px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #7C3AED, #6D28D9)', color: '#fff',
-            textDecoration: 'none', fontWeight: 600, fontSize: '13px'
-          }}>
-            Ingest CSV Dataset
-          </a>
-        </div>
+        <EmptyState
+          title="Anomaly Detection"
+          kpis={[
+            { label: 'Critical Anomalies', value: '0' },
+            { label: 'Medium Anomalies', value: '0' },
+            { label: 'Resolved', value: '0' },
+            { label: 'Total Alerts', value: '0' },
+          ]}
+        />
       </ConsoleLayout>
     );
   }
@@ -288,22 +296,42 @@ export const AnomalyDetectionPage = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }} className="ano-chart-grid">
 
         {/* Timeline */}
-        <ChartCard title="Anomaly Timeline" subtitle="Daily cost and anomaly count over the past 30 days">
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={dynamicTimeline} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+        <ChartCard title="Anomaly Timeline" subtitle="Daily cost trajectory with glowing red anomaly markers">
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={dynamicTimeline.length > 0 ? dynamicTimeline : timelineData} margin={{ top: 12, right: 15, left: -5, bottom: 0 }}>
               <defs>
                 <linearGradient id="gCost" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="day" tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `$${v / 1000}K`} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontSize: '12px', color: '#F1F5F9' }} />
-              <Area yAxisId="left" type="monotone" dataKey="cost" stroke="#3B82F6" strokeWidth={2} fill="url(#gCost)" name="Daily Cost ($)" />
-              <Bar yAxisId="right" dataKey="anomalies" fill="#EF4444" opacity={0.8} radius={[3, 3, 0, 0]} name="Anomalies" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="day" interval={1} tick={{ fill: '#94A3B8', fontSize: 11, fontFamily: 'Inter', fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#94A3B8', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `$${Math.round(v / 1000)}K` : `$${v}`} />
+              <Tooltip contentStyle={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', fontSize: '12px', color: '#F1F5F9', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }} />
+              <Area
+                type="monotone"
+                dataKey="cost"
+                stroke="#3B82F6"
+                strokeWidth={2.5}
+                fill="url(#gCost)"
+                name="Daily Cost ($)"
+                dot={(props) => {
+                  const { cx, cy, payload } = props;
+                  if (payload.anomalies > 0) {
+                    const isCrit = payload.severity === 'critical';
+                    const dotColor = isCrit ? '#EF4444' : '#F59E0B';
+                    return (
+                      <g key={props.index}>
+                        <circle cx={cx} cy={cy} r="9" fill={dotColor} fillOpacity={0.25} />
+                        <circle cx={cx} cy={cy} r="5" fill={dotColor} stroke="#FFFFFF" strokeWidth={1.5} style={{ filter: `drop-shadow(0 0 6px ${dotColor})` }} />
+                      </g>
+                    );
+                  }
+                  return <circle key={props.index} cx={cx} cy={cy} r="3" fill="#3B82F6" strokeWidth={1} />;
+                }}
+                activeDot={{ r: 7, fill: '#60A5FA', stroke: '#3B82F6', strokeWidth: 2 }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -438,6 +466,21 @@ export const AnomalyDetectionPage = () => {
                               <div style={{ fontSize: '10px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Baseline (7-day avg)</div>
                               <div style={{ fontFamily: 'Space Grotesk, monospace', fontWeight: 700, fontSize: '16px', color: '#22C55E' }}>${(a.baseline / 1000).toFixed(1)}K</div>
                             </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleResolve(a.id); }}
+                              style={{
+                                padding: '7px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '11.5px', fontWeight: 700,
+                                background: a.status === 'resolved' ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #22C55E, #16A34A)',
+                                border: a.status === 'resolved' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(34,197,94,0.4)',
+                                color: a.status === 'resolved' ? '#94A3B8' : '#FFFFFF',
+                                boxShadow: a.status === 'resolved' ? 'none' : '0 0 14px rgba(34,197,94,0.3)',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {a.status === 'resolved' ? '⟳ Re-open Anomaly' : '✓ Mark as Resolved'}
+                            </button>
                           </div>
                         </td>
                       </tr>

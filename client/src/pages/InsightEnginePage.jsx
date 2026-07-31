@@ -330,7 +330,7 @@ export const InsightEnginePage = () => {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '20px', height: 'calc(100vh - 240px)', minHeight: '520px' }} className="insight-grid">
-        
+
         {/* Suggested Actions Sidebar */}
         <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px', height: 'fit-content' }}>
           <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '13px', color: '#F1F5F9', marginBottom: '8px' }}>
@@ -423,7 +423,7 @@ export const InsightEnginePage = () => {
                         fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#94A3B8', lineHeight: 1.6,
                       }}>
                         <ReactMarkdown>{msg.text}</ReactMarkdown>
-                        
+
                         {/* Render inline Recharts visualizations */}
                         <AIChartRenderer data={msg.data} functionCalled={msg.functionCalled} />
                       </div>

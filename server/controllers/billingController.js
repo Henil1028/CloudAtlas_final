@@ -1,4 +1,5 @@
 const fs = require('fs');
+const axios = require('axios');
 const BillingData = require('../models/BillingData');
 const UploadedFile = require('../models/UploadedFile');
 const AuditLog = require('../models/AuditLog');
@@ -80,6 +81,18 @@ const uploadCSV = async (req, res) => {
     // Delete temp file after storing
     fs.unlinkSync(req.file.path);
 
+    // ── Background ML Retrain (non-blocking) ──────────────────────────────
+    // Fire-and-forget: trigger Django to retrain models on the new dataset
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      axios.post('http://localhost:8000/api/ml/retrain', {}, {
+        headers: { Authorization: authHeader },
+        timeout: 120000, // 2 minute timeout for training
+      })
+      .then(() => console.log('✅ ML models retrained on new upload'))
+      .catch(err => console.warn('⚠️  ML retrain skipped (Django unavailable):', err.message));
+    }
+
     res.status(201).json({
       message: 'Billing data uploaded and validated successfully',
       file: uploadedFile,
@@ -103,8 +116,25 @@ const getBillingData = async (req, res) => {
     const { provider, service, region, costMin, costMax, dateMin, dateMax, search, sortBy, sortOrder, page = 1, limit = 10, fileId, scope } = req.query;
 
     let filter = {};
-    if (fileId) {
-      filter.fileId = fileId;
+    if (fileId && fileId !== 'undefined' && fileId !== 'null') {
+      try {
+        const fileExists = await UploadedFile.exists({ _id: fileId });
+        if (fileExists) {
+          filter.fileId = fileId;
+        } else {
+          const latestFile = await UploadedFile.findOne({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+          if (latestFile) {
+            filter.fileId = latestFile._id;
+          } else {
+            return res.json({
+              records: [],
+              pagination: { total: 0, page: Number(page), limit: Number(limit), pages: 0 },
+            });
+          }
+        }
+      } catch (e) {
+        filter.fileId = fileId;
+      }
     } else if (scope !== 'all') {
       const latestFile = await UploadedFile.findOne({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
       if (latestFile) {
@@ -230,27 +260,59 @@ const getSummary = async (req, res) => {
   try {
     const { fileId, scope } = req.query;
     let filter = {};
-
-    if (fileId) {
-      filter = { fileId };
-    } else if (scope === 'all' && ['super_admin', 'admin'].includes(req.user.role)) {
-      filter = {};
+    if (fileId && fileId !== 'undefined' && fileId !== 'null') {
+      try {
+        const mongoose = require('mongoose');
+        const objId = new mongoose.Types.ObjectId(fileId);
+        const fileExists = await UploadedFile.exists({ _id: objId });
+        if (fileExists) {
+          filter = { $or: [{ fileId: objId }, { fileId: fileId }] };
+        } else {
+          // File was deleted — fall back to user's latest remaining file
+          const isGlobal = scope === 'all' && ['super_admin', 'admin'].includes(req.user?.role);
+          const userFilter = isGlobal ? {} : (req.user?._id ? { uploadedBy: req.user._id } : {});
+          const latestFile = await UploadedFile.findOne(userFilter).sort({ createdAt: -1 });
+          if (latestFile) {
+            filter = { $or: [{ fileId: latestFile._id }, { fileId: String(latestFile._id) }] };
+          } else {
+            return res.json({
+              totalCost: 0,
+              averageCost: 0,
+              totalRecords: 0,
+              totalFiles: 0,
+              providerSpend: { aws: 0, azure: 0, gcp: 0 },
+              serviceSpend: [],
+              dailySpend: [],
+              monthlySpend: [],
+              recentUploads: [],
+            });
+          }
+        }
+      } catch (e) {
+        filter = { fileId };
+      }
     } else {
-      // Target latest uploaded file for the user to ensure exact 1550/1500 dataset metrics
-      const latestFile = await UploadedFile.findOne({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+      const isGlobal = scope === 'all' && ['super_admin', 'admin'].includes(req.user?.role);
+      const userFilter = isGlobal ? {} : (req.user?._id ? { uploadedBy: req.user._id } : {});
+      const latestFile = await UploadedFile.findOne(userFilter).sort({ createdAt: -1 });
       if (latestFile) {
-        filter = { fileId: latestFile._id };
+        filter = { $or: [{ fileId: latestFile._id }, { fileId: String(latestFile._id) }] };
       } else {
-        const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
-        filter = isAdmin ? {} : { uploadedBy: req.user._id };
+        return res.json({
+          totalCost: 0,
+          averageCost: 0,
+          totalRecords: 0,
+          totalFiles: 0,
+          providerSpend: { aws: 0, azure: 0, gcp: 0 },
+          serviceSpend: [],
+          dailySpend: [],
+          monthlySpend: [],
+          recentUploads: [],
+        });
       }
     }
 
     let records = await BillingData.find(filter);
-    if (records.length === 0 && (filter.fileId || filter.$or)) {
-      const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
-      records = await BillingData.find(isAdmin ? {} : { uploadedBy: req.user._id });
-    }
 
     if (records.length === 0) {
       return res.json({
@@ -272,7 +334,8 @@ const getSummary = async (req, res) => {
     const monthlyMap = {};
 
     records.forEach((r) => {
-      const cost = Number(r.cost);
+      const rawCost = r.cost ?? r.Cost ?? r.amount ?? r.price ?? r.BilledCost ?? 0;
+      const cost = typeof rawCost === 'string' ? parseFloat(rawCost.replace(/[^0-9.-]+/g, '')) || 0 : Number(rawCost) || 0;
       totalCost += cost;
 
       // Provider
@@ -324,7 +387,7 @@ const getSummary = async (req, res) => {
         azure: Math.round(providerMap.azure * 100) / 100,
         gcp: Math.round(providerMap.gcp * 100) / 100,
       },
-      serviceSpend: serviceSpend.slice(0, 10), // Top 10 services
+      serviceSpend, // All unique services present in uploaded CSV
       dailySpend,
       monthlySpend,
       recentUploads: await UploadedFile.find({}).sort({ createdAt: -1 }).limit(5),

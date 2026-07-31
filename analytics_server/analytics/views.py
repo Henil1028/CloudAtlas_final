@@ -78,29 +78,46 @@ def get_mock_python_records():
         })
     return records
 
-# Retrieve records from MongoDB, fallback to Express API, then mock data
-def get_billing_records(user_id=None, auth_token=None):
+# Retrieve records from MongoDB filtered to target/latest upload, fallback to Express API, then mock data
+def get_billing_records(user_id=None, auth_token=None, target_file_id=None):
     mongo_uri = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/cloudatlas')
     express_url = os.environ.get('EXPRESS_API_URL', 'http://localhost:5000')
     import pymongo
     from bson.objectid import ObjectId
 
-    # --- Attempt 1: MongoDB ---
+    # --- Attempt 1: MongoDB (target or latest fileId) ---
     try:
         client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=1200)
         client.server_info()
         db = client['cloudatlas']
-        collection = db['billingdatas']
-        
+        billing_col = db['billingdatas']
         filter_dict = {}
-        if user_id:
+
+        if target_file_id:
             try:
-                filter_dict['uploadedBy'] = ObjectId(user_id)
+                filter_dict['fileId'] = ObjectId(target_file_id)
             except Exception:
-                filter_dict['uploadedBy'] = user_id
-                
-        records = list(collection.find(filter_dict))
-        
+                filter_dict['fileId'] = target_file_id
+        else:
+            files_col = db['uploadedfiles']
+            file_filter = {}
+            if user_id:
+                try:
+                    file_filter['uploadedBy'] = ObjectId(user_id)
+                except Exception:
+                    file_filter['uploadedBy'] = user_id
+
+            latest_file = files_col.find_one(file_filter, sort=[('createdAt', pymongo.DESCENDING)])
+            if latest_file:
+                filter_dict['fileId'] = latest_file['_id']
+            elif user_id:
+                try:
+                    filter_dict['uploadedBy'] = ObjectId(user_id)
+                except Exception:
+                    filter_dict['uploadedBy'] = user_id
+
+        records = list(billing_col.find(filter_dict))
+
         for r in records:
             r['_id'] = str(r['_id'])
             if isinstance(r.get('date'), datetime.datetime):
@@ -114,7 +131,7 @@ def get_billing_records(user_id=None, auth_token=None):
     except Exception:
         pass  # MongoDB offline — fall through to Express fallback
 
-    # --- Attempt 2: Express Node.js in-memory API ---
+    # --- Attempt 2: Express Node.js API (latest file scope) ---
     try:
         import urllib.request
         import urllib.error
@@ -131,10 +148,9 @@ def get_billing_records(user_id=None, auth_token=None):
             data = json_lib.loads(response.read().decode())
             records = data.get('data', data) if isinstance(data, dict) else data
             if isinstance(records, list) and len(records) > 0:
-                # Normalize date fields
                 for r in records:
                     if isinstance(r.get('date'), str):
-                        pass  # already string
+                        pass
                     elif hasattr(r.get('date'), 'strftime'):
                         r['date'] = r['date'].strftime('%Y-%m-%d')
                 return records
@@ -242,7 +258,8 @@ def get_analytics_quality(request):
 def get_analytics_trends(request):
     user_payload = authorize_user(request)
     auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
+    target_file_id = request.query_params.get('fileId')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token, target_file_id=target_file_id)
     records = filter_records(records, request.query_params)
     pipeline_results = run_pipeline(records)
     return Response({

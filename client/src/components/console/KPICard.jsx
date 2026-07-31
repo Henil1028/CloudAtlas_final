@@ -49,14 +49,16 @@ export const KPICard = ({
   style = {},
   delay = 0,
 }) => {
-  const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
-  const counted = useCountUp(animateCount ? numValue : 0, 1200);
-  const displayVal = animateCount ? counted : numValue;
+  const isRawString = typeof value === 'string' && (value.startsWith('$') || value.includes(',') || value.includes('/') || value.includes('Active') || isNaN(Number(value)));
+  const numValue = typeof value === 'number' ? value : (parseFloat(String(value).replace(/[^0-9.-]+/g, '')) || 0);
+  const counted = useCountUp(animateCount && !isRawString ? numValue : 0, 1200);
+  const displayVal = animateCount && !isRawString ? counted : numValue;
 
   const trendKey = trend ? `${trend.direction}_${trend.type}` : 'neutral';
   const trendColor = TREND_COLORS[trendKey] || '#94A3B8';
 
   const formatDisplay = (v) => {
+    if (isRawString) return value;
     if (unit === 'M' && v >= 1000000) return (v / 1000000).toFixed(2);
     if (unit === 'K' && v >= 1000) return (v / 1000).toFixed(1);
     if (Number.isInteger(numValue)) return Math.round(v).toLocaleString();

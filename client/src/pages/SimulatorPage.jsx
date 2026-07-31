@@ -9,6 +9,7 @@ import { ChartCard } from '../components/console/ChartCard';
 import { PageHeader } from '../components/console/PageHeader';
 
 import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
 const PRESETS = {
@@ -39,12 +40,13 @@ export const SimulatorPage = () => {
   const [baseline, setBaseline] = useState({ ...PRESETS.enterprise });
   const [activePreset, setActivePreset] = useState('enterprise');
   const [dataSummary, setDataSummary] = useState(null);
+  const { lastUploadTime } = useDataContext();
 
   useEffect(() => {
     api.get('/billing/summary')
       .then(res => setDataSummary(res.data))
       .catch(() => {});
-  }, []);
+  }, [lastUploadTime]);
 
   const calculatedBase = computeCost(config);
   const oldCost = computeCost(baseline);
