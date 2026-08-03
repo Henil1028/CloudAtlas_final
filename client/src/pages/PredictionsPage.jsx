@@ -191,6 +191,42 @@ export const PredictionsPage = () => {
 
       setDataSummary(summary);
 
+      // Auto-update form provider strictly to match highest-spend provider in uploaded dataset
+      let detectedProv = null;
+
+      // 1. Check provider in daily spend or raw summary records
+      if (summary?.records && summary.records.length > 0 && summary.records[0].provider) {
+        detectedProv = summary.records[0].provider.toLowerCase();
+      }
+
+      // 2. Check providerSpend object/array
+      if (!detectedProv && summary?.providerSpend) {
+        if (Array.isArray(summary.providerSpend) && summary.providerSpend.length > 0) {
+          detectedProv = summary.providerSpend[0].provider?.toLowerCase();
+        } else if (typeof summary.providerSpend === 'object') {
+          const entries = Object.entries(summary.providerSpend).sort((a, b) => b[1] - a[1]);
+          if (entries.length > 0 && entries[0][1] > 0) {
+            detectedProv = entries[0][0].toLowerCase();
+          }
+        }
+      }
+      
+      // 3. Fallback: check topServices keywords
+      if (!detectedProv && summary?.topServices && summary.topServices.length > 0) {
+        const topS = summary.topServices.map(s => s.service.toLowerCase()).join(' ');
+        if (topS.includes('azure') || topS.includes('virtual machines') || topS.includes('blob') || topS.includes('cosmos') || topS.includes('meter') || topS.includes('sql database') || topS.includes('app service')) detectedProv = 'azure';
+        else if (topS.includes('gcp') || topS.includes('bigquery') || topS.includes('compute engine') || topS.includes('cloud storage')) detectedProv = 'gcp';
+        else if (topS.includes('ec2') || topS.includes('s3') || topS.includes('aws') || topS.includes('eks')) detectedProv = 'aws';
+      }
+
+      if (detectedProv && ['aws', 'azure', 'gcp'].includes(detectedProv)) {
+        setForm(prev => ({ 
+          ...prev, 
+          provider: detectedProv,
+          service: detectedProv === 'gcp' ? 'Compute Engine' : detectedProv === 'azure' ? 'Virtual Machines' : 'EC2'
+        }));
+      }
+
       if (daily.length > 0) {
         // 1. Format historical anomaly data
         const avg = daily.reduce((s, x) => s + x.cost, 0) / daily.length;
@@ -775,7 +811,7 @@ export const PredictionsPage = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'Outfit', color: '#F1F5F9', margin: 0, letterSpacing: '-0.02em' }}>
-                AWS Total Cost Dashboard
+                {(form.provider || 'AWS').toUpperCase()} Total Cost Dashboard
               </h1>
               <p style={{ fontSize: '11px', color: '#475569', margin: '4px 0 0', fontFamily: 'Inter' }}>
                 XGBoost Regressor · Historical data + ML Forecast overlay
@@ -1048,20 +1084,20 @@ export const PredictionsPage = () => {
 
           {/* ── Inline Filter Pills ── */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px', position: 'relative', flexWrap: 'wrap' }}>
-            {/* Provider */}
+            {/* Provider (Auto-Detected Badge) */}
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowProviderMenu(!showProviderMenu)}
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', color: '#CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                <Filter size={11} color="#3B82F6" />
-                Provider: <span style={{ color: '#3B82F6', textTransform: 'uppercase' }}>{form.provider}</span>
-                <ChevronDown size={10} color="#64748B" />
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: '8px', color: '#06B6D4', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                <Filter size={11} color="#06B6D4" />
+                Provider: <span style={{ color: '#06B6D4', textTransform: 'uppercase', fontWeight: 800 }}>{form.provider}</span>
+                <ChevronDown size={10} color="#06B6D4" />
               </button>
               {showProviderMenu && (
                 <div style={{ position: 'absolute', top: '34px', left: 0, zIndex: 200, background: '#0B0F19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '4px', width: '130px', boxShadow: '0 12px 30px rgba(0,0,0,0.6)' }}>
-                  {['aws', 'azure', 'gcp', 'oracle'].map(p => (
+                  {['aws', 'azure', 'gcp'].map(p => (
                     <div key={p} onClick={() => { setForm(f => ({ ...f, provider: p })); setShowProviderMenu(false); }}
                       style={{ padding: '7px 10px', fontSize: '11px', color: '#CBD5E1', borderRadius: '5px', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      {p} {form.provider === p && <Check size={10} color="#3B82F6" />}
+                      {p} {form.provider === p && <Check size={10} color="#06B6D4" />}
                     </div>
                   ))}
                 </div>

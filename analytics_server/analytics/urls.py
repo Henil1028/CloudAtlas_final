@@ -9,4 +9,5 @@ urlpatterns = [
     path('services', views.get_analytics_services, name='analytics_services'),
     path('correlation', views.get_analytics_correlation, name='analytics_correlation'),
     path('export', views.get_analytics_export, name='analytics_export'),
+    path('migration-intelligence', views.get_migration_intelligence, name='analytics_migration_intelligence'),
 ]

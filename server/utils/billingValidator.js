@@ -17,12 +17,12 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
     parser
       .on('headers', (rawHeaders) => {
         const normHeaders = rawHeaders.map(normalizeHeader);
-        
+
         // Flexible column mapping
         const hasDate = normHeaders.some(h => ['date', 'timestamp', 'time', 'day', 'datetime'].includes(h));
         const hasService = normHeaders.some(h => ['service', 'servicename', 'product', 'resource', 'servicecode'].includes(h));
         const hasCost = normHeaders.some(h => ['cost', 'spend', 'amount', 'totalcost', 'unblendedcost'].includes(h));
-        
+
         const missing = [];
         if (!hasDate) missing.push('date');
         if (!hasService) missing.push('service');
@@ -38,7 +38,7 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
       })
       .on('data', (row) => {
         lineCount++;
-        
+
         // Skip empty rows
         if (Object.keys(row).length === 0 || Object.values(row).every(v => !v || v.trim() === '')) {
           return;
@@ -55,7 +55,23 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
         const costVal = normalizedRow['cost'] || normalizedRow['spend'] || normalizedRow['amount'] || normalizedRow['totalcost'] || normalizedRow['unblendedcost'];
         const regionVal = normalizedRow['region'] || normalizedRow['location'] || normalizedRow['zone'] || 'us-east-1';
         const usageTypeVal = normalizedRow['usagetype'] || normalizedRow['type'] || normalizedRow['usage'] || 'StandardUsage';
-        const providerVal = normalizedRow['provider'] || normalizedRow['cloud'] || normalizedRow['platform'] || defaultProvider;
+        // Auto-detect provider based on filename and row contents/headers
+        let detectedProvider = defaultProvider;
+        const fnameStr = String(filePath || '').toLowerCase();
+        if (fnameStr.includes('azure')) detectedProvider = 'azure';
+        else if (fnameStr.includes('gcp') || fnameStr.includes('google')) detectedProvider = 'gcp';
+        else if (fnameStr.includes('aws') || fnameStr.includes('amazon')) detectedProvider = 'aws';
+
+        const rowStr = JSON.stringify(normalizedRow).toLowerCase();
+        if (rowStr.includes('azure') || rowStr.includes('meter') || rowStr.includes('subscription') || rowStr.includes('resourcegroup') || rowStr.includes('virtual machines') || rowStr.includes('blob') || rowStr.includes('microsoft')) {
+          detectedProvider = 'azure';
+        } else if (rowStr.includes('gcp') || rowStr.includes('google') || rowStr.includes('bigquery') || rowStr.includes('compute engine') || rowStr.includes('cloud storage')) {
+          detectedProvider = 'gcp';
+        } else if (rowStr.includes('aws') || rowStr.includes('ec2') || rowStr.includes('s3') || rowStr.includes('unblendedcost') || rowStr.includes('amazon')) {
+          detectedProvider = 'aws';
+        }
+
+        const providerVal = normalizedRow['provider'] || normalizedRow['cloud'] || normalizedRow['platform'] || detectedProvider;
 
         // Validate essential fields presence
         if (!dateVal || !costVal) {
@@ -63,10 +79,11 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
           return;
         }
 
-        // Validate provider
+        // Validate provider - Strictly allow only aws, azure, or gcp
         let provider = (providerVal || defaultProvider).trim().toLowerCase();
         if (!['aws', 'azure', 'gcp'].includes(provider)) {
-          provider = (defaultProvider || 'aws').toLowerCase();
+          errors.push(`Row ${lineCount}: Invalid cloud provider "${provider}". Only AWS, Azure, and GCP billing files are supported.`);
+          return;
         }
 
         // Validate date format

@@ -28,11 +28,7 @@ const relativeTime = (dateStr) => {
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '10px', padding: '10px 14px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-    }}>
+    <div className="recharts-default-tooltip">
       <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#64748B', fontFamily: 'Inter, sans-serif' }}>{label}</p>
       {payload.map((entry, i) => (
         <p key={i} style={{ margin: '2px 0', fontSize: '13px', fontWeight: 600, color: entry.color, fontFamily: 'Space Grotesk, monospace' }}>
@@ -46,13 +42,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 const ProviderTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: '10px', padding: '10px 14px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-    }}>
+    <div className="recharts-default-tooltip">
       <p style={{ margin: '0 0 4px', fontSize: '12px', color: '#64748B' }}>{label}</p>
-      <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Space Grotesk, monospace' }}>
+      <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, fontFamily: 'Space Grotesk, monospace' }}>
         ${(payload[0]?.value / 1000).toFixed(1)}K
       </p>
     </div>

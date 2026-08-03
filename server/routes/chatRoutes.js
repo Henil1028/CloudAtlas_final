@@ -310,31 +310,46 @@ ${JSON.stringify(dataContext, null, 2)}
           parts: [{ text: message }]
         });
 
-        const geminiResponse = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-          {
-            contents,
-            generationConfig: {
-              temperature: 0.4,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            }
-          }
-        );
+        let geminiResponse = null;
+        const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
+        let lastError = null;
 
-        const text = geminiResponse.data.candidates[0].content.parts[0].text;
-        return res.json({
-          text,
-          functionCalled,
-          confidenceScore: '96%',
-          estimatedSavings: functionCalled === 'getRecommendations()' ? '$62,600/yr' : null,
-          data: dataContext,
-          poweredBy: 'Google Gemini 2.5 Flash'
-        });
-      } catch (err) {
-        console.error('Gemini API Error:', err.response?.data?.error?.message || err.message);
-        // Fall through to rule-based fallback
+        for (const model of modelsToTry) {
+          try {
+            geminiResponse = await axios.post(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+              {
+                contents,
+                generationConfig: {
+                  temperature: 0.4,
+                  topK: 40,
+                  topP: 0.95,
+                  maxOutputTokens: 1024,
+                }
+              }
+            );
+            if (geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+              break;
+            }
+          } catch (e) {
+            lastError = e;
+          }
+        }
+
+        if (geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          const text = geminiResponse.data.candidates[0].content.parts[0].text;
+          return res.json({
+            text,
+            functionCalled,
+            confidenceScore: '96%',
+            estimatedSavings: functionCalled === 'getRecommendations()' ? '$62,600/yr' : null,
+            data: dataContext,
+            poweredBy: 'Google Gemini AI Engine'
+          });
+        }
+        console.error('Gemini API Error:', lastError?.response?.data?.error?.message || lastError?.message);
+      } catch (geminiOuterErr) {
+        console.error('Gemini Outer Catch Error:', geminiOuterErr.message);
       }
     }
 

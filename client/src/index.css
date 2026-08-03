@@ -152,6 +152,28 @@
     transition: all 0.25s ease;
   }
 
+  /* --- High-Speed Animations & Shimmers --- */
+  @keyframes fastShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: fastShimmer 1.2s infinite ease-in-out;
+  }
+
+  .page-fast-fade {
+    animation: fadeInFast 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  @keyframes fadeInFast {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   .glass-card-sm:hover {
     border-color: rgba(124, 58, 237, 0.18);
     background: rgba(15, 23, 42, 0.75);
@@ -836,9 +858,207 @@
   transition: all 0.6s ease;
 }
 
-.glow-btn-primary:hover::after {
-  left: 120%;
-  top: 120%;
+
+/* ============================================================
+   FORTUNE 500 ENTERPRISE LIGHT MODE SYSTEM
+   Inspired by Microsoft Fabric, Azure, Stripe & Vercel
+   Color Palette:
+   - Background: #F8FAFC (Off-white)
+   - Cards: #FFFFFF (Crisp White)
+   - Borders: #E2E8F0 (Subtle Slate Border)
+   - Headings: #0F172A (Dark Navy)
+   - Body/Secondary: #475569 (Slate Gray)
+   - Supporting: #94A3B8 (Muted Gray)
+   - Primary Blue: #2563EB
+   - Secondary Cyan: #06B6D4
+   - Success Green: #22C55E
+   - Warning Orange: #F59E0B
+   - Danger Red: #EF4444
+   ============================================================ */
+
+html.light-mode,
+html.light-mode body,
+html.light-mode #root,
+html.light-mode main {
+  background-color: #F8FAFC !important;
+  background-image: none !important;
+  color: #0F172A !important;
 }
+
+/* Headings & Text Color Overrides */
+html.light-mode h1,
+html.light-mode h2,
+html.light-mode h3,
+html.light-mode h4,
+html.light-mode h5,
+html.light-mode h6 {
+  color: #0F172A !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+}
+
+html.light-mode p,
+html.light-mode span,
+html.light-mode label {
+  color: #475569;
+}
+
+html.light-mode .text-slate-100,
+html.light-mode .text-slate-200,
+html.light-mode .text-slate-300,
+html.light-mode .text-white,
+html.light-mode .text-gray-100,
+html.light-mode .text-gray-200,
+html.light-mode .text-gray-300 {
+  color: #0F172A !important;
+}
+
+html.light-mode .text-slate-400,
+html.light-mode .text-slate-500,
+html.light-mode .text-gray-400,
+html.light-mode .text-gray-500 {
+  color: #475569 !important;
+}
+
+/* Primary Navigation - Topbar & Sidebar */
+html.light-mode .console-sidebar,
+html.light-mode aside {
+  background: #FFFFFF !important;
+  border-right: 1px solid #E2E8F0 !important;
+  box-shadow: 2px 0 16px rgba(15, 23, 42, 0.03) !important;
+}
+
+html.light-mode .console-sidebar a,
+html.light-mode .console-sidebar button {
+  color: #475569 !important;
+}
+
+html.light-mode .console-sidebar a:hover,
+html.light-mode .console-sidebar button:hover,
+html.light-mode .console-sidebar a.active {
+  background: #EFF6FF !important;
+  color: #2563EB !important;
+  border-radius: 10px !important;
+}
+
+html.light-mode .console-topbar,
+html.light-mode header {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Eliminate All Dark Cards/Patches & Apply Crisp Pure White Cards */
+html.light-mode .glass-card,
+html.light-mode .glass-card-sm,
+html.light-mode .card,
+html.light-mode [class*="bg-slate-900"],
+html.light-mode [class*="bg-slate-950"],
+html.light-mode [class*="bg-slate-900/"],
+html.light-mode [class*="bg-slate-800"],
+html.light-mode [class*="bg-black"],
+html.light-mode [class*="bg-emerald-950"],
+html.light-mode [class*="bg-cyan-950"],
+html.light-mode [class*="bg-purple-950"],
+html.light-mode [class*="bg-[#07130F]"],
+html.light-mode [class*="bg-[#0B1023]"],
+html.light-mode [class*="bg-[#05070c]"],
+html.light-mode [class*="bg-slate-900/60"],
+html.light-mode [class*="bg-slate-950/60"],
+html.light-mode [class*="bg-slate-950/40"] {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02) !important;
+  color: #0F172A !important;
+}
+
+/* Soft Inner Sections & Subtle Hover States */
+html.light-mode [class*="bg-slate-800/"],
+html.light-mode [class*="bg-white/"],
+html.light-mode [class*="bg-white\\["] {
+  background: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Inputs, Selects & Form Controls */
+html.light-mode input,
+html.light-mode select,
+html.light-mode textarea {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light-mode input:focus,
+html.light-mode select:focus,
+html.light-mode textarea:focus {
+  border-color: #2563EB !important;
+  outline: 2px solid rgba(37, 99, 235, 0.15) !important;
+}
+
+html.light-mode input::placeholder,
+html.light-mode textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Tables Styling */
+html.light-mode table {
+  background: #FFFFFF !important;
+}
+
+html.light-mode table th {
+  background-color: #F8FAFC !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+html.light-mode table td {
+  border-bottom: 1px solid #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+/* Chart Tooltips & Legends */
+html.light-mode .recharts-default-tooltip {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light-mode .recharts-text {
+  fill: #64748B !important;
+}
+
+html.light-mode .recharts-cartesian-grid-horizontal line,
+html.light-mode .recharts-cartesian-grid-vertical line {
+  stroke: #E2E8F0 !important;
+}
+
+/* Disable dark background overlays in light mode */
+html.light-mode [class*="EnterpriseBackground"],
+html.light-mode [class*="CinematicBackground"] {
+  display: none !important;
+}
+
+/* Clean Scrollbar */
+html.light-mode ::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+html.light-mode ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 6px;
+}
+html.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+
+
+
 
 

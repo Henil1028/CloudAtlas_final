@@ -93,30 +93,17 @@ def get_billing_records(user_id=None, auth_token=None, target_file_id=None):
         billing_col = db['billingdatas']
         filter_dict = {}
 
-        if target_file_id:
-            try:
-                filter_dict['fileId'] = ObjectId(target_file_id)
-            except Exception:
-                filter_dict['fileId'] = target_file_id
-        else:
+        # Fetch latest uploaded file across all users or target file
+        if not target_file_id:
             files_col = db['uploadedfiles']
-            file_filter = {}
-            if user_id:
-                try:
-                    file_filter['uploadedBy'] = ObjectId(user_id)
-                except Exception:
-                    file_filter['uploadedBy'] = user_id
-
-            latest_file = files_col.find_one(file_filter, sort=[('createdAt', pymongo.DESCENDING)])
+            latest_file = files_col.find_one({}, sort=[('createdAt', pymongo.DESCENDING)])
             if latest_file:
-                filter_dict['fileId'] = latest_file['_id']
-            elif user_id:
-                try:
-                    filter_dict['uploadedBy'] = ObjectId(user_id)
-                except Exception:
-                    filter_dict['uploadedBy'] = user_id
+                filter_dict['$or'] = [{'fileId': latest_file['_id']}, {'fileId': str(latest_file['_id'])}]
 
-        records = list(billing_col.find(filter_dict))
+        records = list(billing_col.find(filter_dict if filter_dict else {}))
+        if len(records) == 0 and '$or' in filter_dict:
+            # If query by fileId yielded 0, fetch latest inserted billing records
+            records = list(billing_col.find({}).sort('uploadDate', pymongo.DESCENDING).limit(5000))
 
         for r in records:
             r['_id'] = str(r['_id'])
@@ -327,8 +314,25 @@ def get_analytics_export(request):
             writer = csv.writer(response)
             # Use keys of first row as headers
             writer.writerow(cleaned_records[0].keys())
-            for row in cleaned_records:
-                writer.writerow(row.values())
-        return response
-        
     return Response(cleaned_records)
+
+# @desc    Multi-Cloud Cost Comparison & Migration Intelligence Endpoint
+# @route   GET /api/analytics/migration-intelligence
+# @access  Private
+@api_view(['GET'])
+def get_migration_intelligence(request):
+    user_payload = authorize_user(request)
+    auth_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    records = get_billing_records(user_payload.get('id'), auth_token=auth_token)
+    records = filter_records(records, request.query_params)
+    
+    import pandas as pd
+    from .migration_intelligence import MultiCloudMigrationIntelligenceEngine
+    
+    df = pd.DataFrame(records)
+    engine = MultiCloudMigrationIntelligenceEngine()
+    
+    # Process dataset
+    result = engine.process_billing_files([{'file_name': 'billing_data.csv', 'df': df}])
+    return Response(result)
+

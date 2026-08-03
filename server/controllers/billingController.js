@@ -25,7 +25,7 @@ const uploadCSV = async (req, res) => {
     const validation = await validateBillingCSV(req.file.path, provider.toLowerCase());
     if (!validation.isValid) {
       fs.unlinkSync(req.file.path);
-      
+
       // Log failed audit log
       await AuditLog.create({
         user: req.user.email,
@@ -44,7 +44,7 @@ const uploadCSV = async (req, res) => {
 
     const records = validation.records.map((r) => ({
       ...r,
-      provider: provider.toLowerCase(),
+      provider: (r.provider || provider).toLowerCase(),
       uploadedBy: req.user._id,
       uploadDate: new Date(),
     }));
@@ -52,10 +52,13 @@ const uploadCSV = async (req, res) => {
     // Store records in Database (or in-memory mock via Proxy insertMany)
     const savedRecords = await BillingData.insertMany(records);
 
+    // Determine primary provider from saved records
+    const detectedPrimaryProvider = savedRecords[0]?.provider || provider.toLowerCase();
+
     // Save File Upload history log
     const uploadedFile = await UploadedFile.create({
       filename: req.file.originalname,
-      provider: provider.toLowerCase(),
+      provider: detectedPrimaryProvider,
       recordCount: savedRecords.length,
       size: req.file.size,
       uploadedBy: req.user._id,
@@ -89,8 +92,8 @@ const uploadCSV = async (req, res) => {
         headers: { Authorization: authHeader },
         timeout: 120000, // 2 minute timeout for training
       })
-      .then(() => console.log('✅ ML models retrained on new upload'))
-      .catch(err => console.warn('⚠️  ML retrain skipped (Django unavailable):', err.message));
+        .then(() => console.log('✅ ML models retrained on new upload'))
+        .catch(err => console.warn('⚠️  ML retrain skipped (Django unavailable):', err.message));
     }
 
     res.status(201).json({
@@ -154,7 +157,7 @@ const getBillingData = async (req, res) => {
     if (region) {
       filter.region = region;
     }
-    
+
     // Min/Max cost
     if (costMin || costMax) {
       filter.cost = {};

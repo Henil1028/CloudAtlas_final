@@ -189,37 +189,59 @@ export const RiskAssessmentPage = () => {
   }, [lastUploadTime, lastUploadFileId]);
 
   const dynamicProviderRisk = React.useMemo(() => {
-    if (!dataSummary || !dataSummary.providerSpend) return providerRisk;
-    const spend = dataSummary.providerSpend;
-    const total = (spend.aws || 0) + (spend.azure || 0) + (spend.gcp || 0);
-    if (total === 0) return providerRisk;
+    if (!dataSummary) return providerRisk;
 
-    const awsCost = spend.aws || 0;
-    const azureCost = spend.azure || 0;
-    const gcpCost = spend.gcp || 0;
+    const totalCost = dataSummary.totalCost || 1;
+    let awsSpend = 0, azureSpend = 0, gcpSpend = 0;
 
-    // Calculate share of total spend per provider
-    const awsShare = awsCost > 0 ? (awsCost / total) * 100 : 0;
-    const azureShare = azureCost > 0 ? (azureCost / total) * 100 : 0;
-    const gcpShare = gcpCost > 0 ? (gcpCost / total) * 100 : 0;
+    if (dataSummary.providerSpend) {
+      const spend = dataSummary.providerSpend;
+      if (Array.isArray(spend)) {
+        spend.forEach(p => {
+          const name = p.provider?.toLowerCase();
+          if (name === 'aws') awsSpend = p.cost;
+          else if (name === 'azure') azureSpend = p.cost;
+          else if (name === 'gcp') gcpSpend = p.cost;
+        });
+      } else if (typeof spend === 'object') {
+        awsSpend = spend.aws || 0;
+        azureSpend = spend.azure || 0;
+        gcpSpend = spend.gcp || 0;
+      }
+    }
+
+    // Fallback detection using top services if providerSpend object is single
+    if (awsSpend === 0 && azureSpend === 0 && gcpSpend === 0 && totalCost > 0) {
+      const topS = (dataSummary.topServices || []).map(s => s.service.toLowerCase()).join(' ');
+      if (topS.includes('gcp') || topS.includes('bigquery') || topS.includes('compute engine')) gcpSpend = totalCost;
+      else if (topS.includes('azure') || topS.includes('virtual machines') || topS.includes('blob')) azureSpend = totalCost;
+      else awsSpend = totalCost;
+    }
+
+    const getScore = (spendVal, baseRating) => {
+      if (!spendVal || spendVal <= 0) return 0;
+      const sharePct = (spendVal / totalCost) * 100;
+      // Formula: Base Rating + (Share % * 0.25)
+      return Math.min(95, Math.max(30, Math.round(baseRating + sharePct * 0.25)));
+    };
 
     return [
       {
         provider: 'AWS',
-        risk: awsCost > 0 ? Math.min(95, Math.max(30, Math.round(awsShare * 0.6 + 30))) : 0,
-        spend: awsCost,
+        risk: getScore(awsSpend, 65),
+        spend: awsSpend,
         color: '#F59E0B'
       },
       {
         provider: 'Azure',
-        risk: azureCost > 0 ? Math.min(95, Math.max(30, Math.round(azureShare * 0.6 + 30))) : 0,
-        spend: azureCost,
+        risk: getScore(azureSpend, 58),
+        spend: azureSpend,
         color: '#3B82F6'
       },
       {
         provider: 'GCP',
-        risk: gcpCost > 0 ? Math.min(95, Math.max(30, Math.round(gcpShare * 0.6 + 30))) : 0,
-        spend: gcpCost,
+        risk: getScore(gcpSpend, 52),
+        spend: gcpSpend,
         color: '#22C55E'
       },
     ];
@@ -246,10 +268,21 @@ export const RiskAssessmentPage = () => {
   }, [dataSummary]);
 
   const dynamicOverallScore = React.useMemo(() => {
-    if (!dataSummary || !dataSummary.serviceSpend || dataSummary.serviceSpend.length === 0) return 62;
-    const topCost = dataSummary.serviceSpend[0]?.cost || 0;
-    const concentrationPct = (topCost / (dataSummary.totalCost || 1)) * 100;
-    return Math.min(95, Math.max(20, Math.round(concentrationPct * 1.2 + 25)));
+    if (!dataSummary || !dataSummary.serviceSpend || dataSummary.serviceSpend.length === 0) return 38;
+    const services = dataSummary.serviceSpend;
+    const totalCost = dataSummary.totalCost || 1;
+    const topCost = services[0]?.cost || 0;
+    
+    // 1. Concentration Risk Ratio (% of spend locked in top single service)
+    const concentrationRatio = (topCost / totalCost) * 100;
+    
+    // 2. Multi-Service Spread (Number of active services spreading risk)
+    const activeServiceCount = services.length;
+    const spreadBonus = Math.max(0, (5 - activeServiceCount) * 4); // Higher risk if few services
+    
+    // 3. Dynamic Calculation: Baseline 18 + (Concentration * 0.45) + SpreadBonus
+    const calculatedScore = Math.round(18 + (concentrationRatio * 0.45) + spreadBonus);
+    return Math.min(95, Math.max(15, calculatedScore));
   }, [dataSummary]);
 
   const dynamicHeatmap = React.useMemo(() => {

@@ -117,7 +117,8 @@ export const RegisterPage = () => {
       }
       navigate('/dashboard');
     } catch (err) {
-      setLocalError(err.message || 'Registration failed. Please check your inputs.');
+      const serverErrMsg = err.response?.data?.message || err.message || 'Registration failed. Please check your inputs.';
+      setLocalError(serverErrMsg);
     }
   };
 

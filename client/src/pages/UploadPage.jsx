@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { PageHeader } from '../components/console/PageHeader';
-import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { useDataContext } from '../context/DataContext';
 
@@ -222,27 +222,24 @@ export const UploadPage = () => {
 
               <form onSubmit={handleUploadSubmit} className="space-y-6">
                 
-                {/* Provider Selector */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-3">
-                    Cloud Infrastructure Provider
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['aws', 'azure', 'gcp'].map((p) => (
-                      <button
-                        type="button"
-                        key={p}
-                        onClick={() => setProvider(p)}
-                        className={`py-3.5 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                          provider === p
-                            ? 'bg-[#06B6D4]/10 border-[#06B6D4] text-[#06B6D4] shadow-lg shadow-[#06B6D4]/10'
-                            : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+                {/* Smart Provider Auto-Detector Banner */}
+                <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-cyan-500/5 to-transparent border border-emerald-500/20 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                        Automatic Provider Classification
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Our ML Engine automatically identifies AWS, Microsoft Azure, or GCP schemas from your CSV headers.
+                      </p>
+                    </div>
                   </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 whitespace-nowrap hidden sm:inline-block">
+                    AWS • Azure • GCP
+                  </span>
                 </div>
 
                 {/* Drag and Drop Zone */}

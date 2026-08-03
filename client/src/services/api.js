@@ -36,7 +36,11 @@ api.interceptors.response.use(
         if (currentPath !== '/login' && currentPath !== '/') {
           window.location.href = '/login';
         }
+      } else if (error.response.status === 502 || error.response.status === 504) {
+        error.message = 'Backend server timeout or connection error (502). Please check Node backend at port 5000.';
       }
+    } else if (error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
+      error.message = 'Backend server is offline or unreachable on http://localhost:5000.';
     }
     return Promise.reject(error);
   }

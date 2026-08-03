@@ -14,6 +14,9 @@ const getTransporter = async () => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS, // App Password
       },
+      connectionTimeout: 4000,
+      greetingTimeout: 3000,
+      socketTimeout: 5000,
     });
   }
 
@@ -27,12 +30,18 @@ const getTransporter = async () => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 4000,
+      greetingTimeout: 3000,
+      socketTimeout: 5000,
     });
   }
-  
+
   // Otherwise, fallback to Ethereal Email test account for development
   try {
-    const testAccount = await nodemailer.createTestAccount();
+    const testAccount = await Promise.race([
+      nodemailer.createTestAccount(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Ethereal timeout')), 2500))
+    ]);
     return nodemailer.createTransport({
       host: 'smtp.ethereal.email',
       port: 587,
@@ -41,9 +50,11 @@ const getTransporter = async () => {
         user: testAccount.user,
         pass: testAccount.pass,
       },
+      connectionTimeout: 3000,
+      socketTimeout: 4000,
     });
   } catch (err) {
-    // If even that fails (offline), return null, we will just console.log the OTP
+    // If network or test account fails, return null — OTP will still print to Node.js console cleanly
     return null;
   }
 };
@@ -66,7 +77,7 @@ const sendSMS = async (to, otp) => {
       if (!formattedTo.startsWith('+')) {
         formattedTo = '+' + formattedTo;
       }
-      
+
       const params = new URLSearchParams();
       params.append('To', formattedTo);
       params.append('From', fromNumber);
@@ -114,7 +125,7 @@ const sendWhatsApp = async (to, otp) => {
       if (!formattedTo.startsWith('+')) {
         formattedTo = '+' + formattedTo;
       }
-      
+
       const params = new URLSearchParams();
       params.append('To', `whatsapp:${formattedTo}`);
       params.append('From', `whatsapp:${fromNumber}`);
@@ -188,7 +199,7 @@ const register = async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPhone = phoneNumber.trim().replace(/\s+/g, '');
+    const cleanPhone = phoneNumber.trim().replace(/\D/g, '').slice(-10);
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(cleanPhone)) {
       return res.status(400).json({ message: 'Phone number must be exactly 10 digits (e.g., 9876543210).' });
@@ -207,7 +218,7 @@ const register = async (req, res) => {
         { phoneNumber: cleanPhone }
       ]
     });
-    
+
     if (userExists) {
       // If user exists but is not active (pending OTP), allow registering/updating details and sending a new OTP
       if (!userExists.isActive) {
@@ -233,7 +244,7 @@ const register = async (req, res) => {
             message: 'Super Admin activated! Direct access granted.'
           });
         }
-        
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
         userExists.registrationOtp = hashedOtp;
@@ -409,14 +420,14 @@ const login = async (req, res) => {
         { phoneNumber: email.trim() }
       ]
     }).select('+password');
-    
+
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials. User account not found.' });
     }
 
     // Check if account is active (verified) - Super Admins bypass OTP verification
     if (!user.isActive && user.role !== 'super_admin') {
-      return res.status(401).json({ 
+      return res.status(401).json({
         message: 'Account is unverified. Please complete OTP verification first.',
         unverified: true,
         email: user.email
@@ -500,50 +511,57 @@ const forgotPassword = async (req, res) => {
     console.log('========================================\n');
 
     if (isEmail) {
-      // Send email via Nodemailer
-      const transporter = await getTransporter();
-      if (transporter) {
-        const mailOptions = {
-          from: '"CloudAtlas AI Security" <security@cloudatlas.ai>',
-          to: user.email,
-          subject: 'CloudAtlas AI - Reset Password OTP',
-          html: `
-            <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-              <h2 style="color: #00D4FF; text-align: center;">CloudAtlas AI</h2>
-              <p>Hello,</p>
-              <p>You requested an OTP to reset your password. Please use the verification code below to proceed:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; background: #f0f0f0; padding: 10px 20px; border-radius: 5px; border: 1px dashed #ccc;">
-                  ${otp}
-                </span>
+      // Send email via Nodemailer asynchronously without blocking HTTP response
+      try {
+        const transporter = await getTransporter();
+        if (transporter) {
+          const mailOptions = {
+            from: '"CloudAtlas AI Security" <security@cloudatlas.ai>',
+            to: user.email,
+            subject: 'CloudAtlas AI - Reset Password OTP',
+            html: `
+              <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <h2 style="color: #00D4FF; text-align: center;">CloudAtlas AI</h2>
+                <p>Hello,</p>
+                <p>You requested an OTP to reset your password. Please use the verification code below to proceed:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; background: #f0f0f0; padding: 10px 20px; border-radius: 5px; border: 1px dashed #ccc;">
+                    ${otp}
+                  </span>
+                </div>
+                <p style="color: #666; font-size: 12px; text-align: center;">This code will expire in 120 seconds. If you did not request this, please ignore this email.</p>
               </div>
-              <p style="color: #666; font-size: 12px; text-align: center;">This code will expire in 60 seconds. If you did not request this, please ignore this email.</p>
-            </div>
-          `,
-        };
-        
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error('Mail Send Error:', error.message);
-          } else {
-            // If using ethereal test account, log URL to preview email
-            const previewUrl = nodemailer.getTestMessageUrl(info);
-            if (previewUrl) {
-              console.log(`📧 [Ethereal Mail Preview URL]: ${previewUrl}`);
+            `,
+          };
+
+          transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+              console.error('Mail Send Error:', error.message);
+            } else {
+              const previewUrl = nodemailer.getTestMessageUrl(info);
+              if (previewUrl) {
+                console.log(`📧 [Ethereal Mail Preview URL]: ${previewUrl}`);
+              }
             }
-          }
-        });
+          });
+        }
+      } catch (mailErr) {
+        console.error('Mail Transporter Exception (handled):', mailErr.message);
       }
-      res.json({ message: 'OTP sent successfully. Please check your inbox or server logs.' });
+      return res.json({ message: 'OTP sent successfully. Please check your inbox or server logs.' });
     } else {
       // Send SMS and WhatsApp
-      await sendSMS(user.phoneNumber, otp);
-      await sendWhatsApp(user.phoneNumber, otp);
-      res.json({ message: 'OTP sent successfully via SMS and WhatsApp. Please check your phone or server logs.' });
+      try {
+        await sendSMS(user.phoneNumber, otp);
+        await sendWhatsApp(user.phoneNumber, otp);
+      } catch (smsErr) {
+        console.error('SMS Error (handled):', smsErr.message);
+      }
+      return res.json({ message: 'OTP sent successfully via SMS and WhatsApp. Please check your phone or server logs.' });
     }
   } catch (error) {
     console.error('Forgot Password Error:', error);
-    res.status(500).json({ message: 'Server error during forgot password request' });
+    return res.status(500).json({ message: error.message || 'Server error during forgot password request' });
   }
 };
 
@@ -578,7 +596,7 @@ const verifyOtp = async (req, res) => {
     const hashedEnteredOtp = crypto.createHash('sha256').update(otp).digest('hex');
     if (!user.resetPasswordOtp || user.resetPasswordOtp !== hashedEnteredOtp) {
       user.resetPasswordOtpAttempts = (user.resetPasswordOtpAttempts || 0) + 1;
-      
+
       if (user.resetPasswordOtpAttempts >= 3) {
         user.resetPasswordOtp = undefined;
         user.resetPasswordOtpExpires = undefined;
@@ -586,7 +604,7 @@ const verifyOtp = async (req, res) => {
         await user.save();
         return res.status(400).json({ message: 'Too many failed attempts. Reset session locked, please request a new OTP.' });
       }
-      
+
       await user.save();
       const attemptsLeft = 3 - user.resetPasswordOtpAttempts;
       return res.status(400).json({ message: `Invalid OTP code. ${attemptsLeft} attempts remaining.` });
@@ -639,7 +657,7 @@ const verifyOtpOnly = async (req, res) => {
     const hashedEnteredOtp = crypto.createHash('sha256').update(otp).digest('hex');
     if (!user.resetPasswordOtp || user.resetPasswordOtp !== hashedEnteredOtp) {
       user.resetPasswordOtpAttempts = (user.resetPasswordOtpAttempts || 0) + 1;
-      
+
       if (user.resetPasswordOtpAttempts >= 3) {
         user.resetPasswordOtp = undefined;
         user.resetPasswordOtpExpires = undefined;
@@ -647,7 +665,7 @@ const verifyOtpOnly = async (req, res) => {
         await user.save();
         return res.status(400).json({ message: 'Too many failed attempts. Reset session locked, please request a new OTP.' });
       }
-      
+
       await user.save();
       const attemptsLeft = 3 - user.resetPasswordOtpAttempts;
       return res.status(400).json({ message: `Invalid OTP code. ${attemptsLeft} attempts remaining.` });
@@ -680,7 +698,7 @@ const getAllUsers = async (req, res) => {
 const createUser = async (req, res) => {
   try {
     const { name, email, phoneNumber, password, role } = req.body;
-    
+
     if (!name || !email || !phoneNumber || !password) {
       return res.status(400).json({ message: 'Please provide all required fields: name, email, phone number, and password.' });
     }
@@ -789,7 +807,7 @@ const verifyRegistration = async (req, res) => {
   try {
     const { email, otp } = req.body;
     const user = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid verification request' });
     }
@@ -801,7 +819,7 @@ const verifyRegistration = async (req, res) => {
     // Check attempt count (max 5 attempts)
     const currentAttempts = user.registrationOtpAttempts || 0;
     if (currentAttempts >= 5) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Maximum OTP verification attempts (5) reached. Please click "Resend Code" to receive a new OTP.',
         maxAttemptsReached: true
       });
@@ -819,15 +837,15 @@ const verifyRegistration = async (req, res) => {
 
       const attemptsLeft = Math.max(0, 5 - updatedAttempts);
       if (updatedAttempts >= 5) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: 'Maximum verification attempts (5) exceeded. Please request a new OTP by clicking "Resend Code".',
           maxAttemptsReached: true,
           attemptsLeft: 0
         });
       }
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: `Incorrect 6-digit OTP code. You have ${attemptsLeft} attempt(s) remaining.`,
-        attemptsLeft 
+        attemptsLeft
       });
     }
 

@@ -39,6 +39,14 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
   const [darkMode, setDarkMode] = useState(true);
   const searchRef = useRef(null);
 
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      setDarkMode(false);
+      document.documentElement.classList.add('light-mode');
+    }
+  }, []);
+
   const handleLogout = () => {
     setShowProfile(false);
     logout(navigate);
@@ -327,7 +335,17 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
 
         {/* Dark mode toggle */}
         <button
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={() => {
+            const nextMode = !darkMode;
+            setDarkMode(nextMode);
+            if (nextMode) {
+              document.documentElement.classList.remove('light-mode');
+              localStorage.setItem('theme', 'dark');
+            } else {
+              document.documentElement.classList.add('light-mode');
+              localStorage.setItem('theme', 'light');
+            }
+          }}
           style={{
             width: '36px', height: '36px', borderRadius: '8px',
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
@@ -343,8 +361,9 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
             e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
             e.currentTarget.style.color = '#94A3B8';
           }}
+          title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {darkMode ? <Moon size={15} /> : <Sun size={15} />}
+          {darkMode ? <Moon size={15} /> : <Sun size={15} className="text-amber-400" />}
         </button>
 
         {/* Profile Dropdown */}

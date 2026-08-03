@@ -12,24 +12,20 @@ const mongoose = require('mongoose');
 router.use(protect);
 router.use(authorize('super_admin', 'admin', 'user'));
 
-const DJANGO_URL = 'http://localhost:8000/api/analytics';
-const DJANGO_TIMEOUT = 4000; // 4 seconds — fail fast if Django is down
+const DJANGO_URL = 'http://localhost:8001/api/analytics';
+const DJANGO_TIMEOUT = 1200; // 1.2 seconds — ultra-fast failover to MongoDB cache
 
-// Helper to log audit trail
-const logAnalyticsAction = async (req, actionType) => {
-  try {
-    await AuditLog.create({
-      user: req.user.email,
-      ipAddress: req.ip || req.connection.remoteAddress || '127.0.0.1',
-      action: `Analytics: ${actionType}`,
-      timestamp: new Date(),
-      fileName: null,
-      provider: req.query.provider || null,
-      recordCount: 0,
-    });
-  } catch (error) {
-    console.error('Audit Log Error:', error.message);
-  }
+// Helper to log audit trail (non-blocking async background fire-and-forget)
+const logAnalyticsAction = (req, actionType) => {
+  AuditLog.create({
+    user: req.user.email,
+    ipAddress: req.ip || req.connection.remoteAddress || '127.0.0.1',
+    action: `Analytics: ${actionType}`,
+    timestamp: new Date(),
+    fileName: null,
+    provider: req.query.provider || null,
+    recordCount: 0,
+  }).catch(e => console.error('Audit Log Error:', e.message));
 };
 
 // ── Helper: build MongoDB filter from fileId query param ───────────────────────

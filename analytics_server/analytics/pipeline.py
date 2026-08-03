@@ -35,11 +35,26 @@ def run_pipeline(records):
     df['cost'] = df['cost'].astype(float)
     df['date'] = pd.to_datetime(df['date'])
     
-    # 4. Standardise names
+    # 4. Standardise names & auto-detect actual provider from services if mapped incorrectly
     df['provider'] = df['provider'].str.strip().str.lower()
     df['service'] = df['service'].str.strip()
     df['region'] = df['region'].str.strip()
     df['usageType'] = df['usageType'].str.strip()
+
+    def refine_provider(row):
+        prov = str(row['provider']).strip().lower()
+        if prov in ['aws', 'azure', 'gcp']:
+            return prov
+        serv = str(row['service']).lower()
+        if 'azure' in serv or 'virtual machines' in serv or 'blob' in serv or 'cosmos' in serv:
+            return 'azure'
+        elif 'gcp' in serv or 'bigquery' in serv or 'google' in serv or 'compute engine' in serv:
+            return 'gcp'
+        elif 'ec2' in serv or 's3' in serv or 'rds' in serv or 'dynamodb' in serv or 'aws' in serv:
+            return 'aws'
+        return 'aws'
+
+    df['provider'] = df.apply(refine_provider, axis=1)
 
     cleaned_count = len(df)
 

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, BarChart3, Sliders, ShieldAlert,
   Zap, Bot, Database, FileText, Settings, ChevronLeft, ChevronRight,
-  Activity, Sparkles, Menu, X
+  Activity, Sparkles, Menu, X, ArrowRightLeft
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
@@ -20,6 +20,7 @@ const NAV_SECTIONS = [
       { name: 'Budget Simulator', path: '/simulator', icon: Sliders },
       { name: 'Risk Classification', path: '/risk-assessment', icon: ShieldAlert },
       { name: 'Anomaly Detection', path: '/anomalies', icon: Zap },
+      { name: 'Migration Intelligence', path: '/migration-intelligence', icon: ArrowRightLeft },
       { name: 'AI Insight Engine', path: '/insights', icon: Bot },
     ]
   },

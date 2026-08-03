@@ -12,6 +12,7 @@ import { ModelTrainingPage } from '../pages/ModelTrainingPage';
 import { SimulatorPage } from '../pages/SimulatorPage';
 import { RiskAssessmentPage } from '../pages/RiskAssessmentPage';
 import { AnomalyDetectionPage } from '../pages/AnomalyDetectionPage';
+import { MigrationIntelligencePage } from '../pages/MigrationIntelligencePage';
 import { InsightEnginePage } from '../pages/InsightEnginePage';
 import { DatasetsPage } from '../pages/DatasetsPage';
 import { ReportsPage } from '../pages/ReportsPage';
@@ -135,6 +136,15 @@ export const AppRouter = () => {
         element={
           <ProtectedRoute>
             <AnomalyDetectionPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/migration-intelligence"
+        element={
+          <ProtectedRoute>
+            <MigrationIntelligencePage />
           </ProtectedRoute>
         }
       />

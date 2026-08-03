@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }) => {
       });
       return data;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registration failed. Try again.';
+      const msg = err.response?.data?.message || err.message || 'Registration failed. Try again.';
       setError(msg);
       throw new Error(msg);
     } finally {
