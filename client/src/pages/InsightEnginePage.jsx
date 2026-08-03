@@ -176,7 +176,6 @@ export const InsightEnginePage = () => {
   });
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
 
@@ -239,7 +238,6 @@ export const InsightEnginePage = () => {
     setInput('');
     setUploadedFile(null);
     setTyping(true);
-    setShowAlert(true);
 
     try {
       const response = await api.post('/chat', {
@@ -266,7 +264,6 @@ export const InsightEnginePage = () => {
       }]);
     } finally {
       setTyping(false);
-      setShowAlert(false);
     }
   };
 
@@ -574,32 +571,7 @@ export const InsightEnginePage = () => {
         </div>
       </div>
 
-      {/* Floating Processing Alert */}
-      {showAlert && (
-        <div style={{
-          position: 'fixed',
-          top: '80px',
-          right: '24px',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '12px 20px',
-          background: 'rgba(124, 58, 237, 0.15)',
-          border: '1px solid rgba(124, 58, 237, 0.3)',
-          borderRadius: '12px',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 10px 30px rgba(124, 58, 237, 0.25)',
-          color: '#fff',
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '13px',
-          fontWeight: 600,
-          animation: 'slide-in-alert 0.4s cubic-bezier(0.16, 1, 0.3, 1) both'
-        }}>
-          <Sparkles size={16} className="animate-pulse" style={{ color: '#A78BFA' }} />
-          <span>CloudAtlas AI is analyzing records...</span>
-        </div>
-      )}
+
 
       {/* Embedded Styles */}
       <style>{`
