@@ -12,6 +12,7 @@ import {
 import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { PageHeader } from '../components/console/PageHeader';
 import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
 // Visual Colors
 const COLORS = ['#7C3AED', '#06B6D4', '#22C55E', '#F59E0B', '#EF4444', '#EC4899'];
@@ -166,18 +167,12 @@ const AIChartRenderer = ({ data, functionCalled }) => {
 };
 
 export const InsightEnginePage = () => {
+  const { user } = React.useContext(AuthContext);
+  const storageKey = user?._id ? `cloudatlas_chat_history_${user._id}` : 'cloudatlas_chat_history_guest';
+
   const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem('cloudatlas_chat_history');
-    return saved ? JSON.parse(saved) : [
-      {
-        role: 'assistant',
-        text: "Hello! I'm your CloudAtlas AI FinOps Consultant. I can help analyze your cloud cost predictions, budgets, anomalies, and provide recommendations. Ask me anything!",
-        functionCalled: 'none',
-        confidenceScore: null,
-        estimatedSavings: null,
-        data: null
-      }
-    ];
+    const saved = localStorage.getItem(storageKey);
+    return saved ? JSON.parse(saved) : [];
   });
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -190,9 +185,9 @@ export const InsightEnginePage = () => {
   const location = useLocation();
 
   useEffect(() => {
-    localStorage.setItem('cloudatlas_chat_history', JSON.stringify(messages));
+    localStorage.setItem(storageKey, JSON.stringify(messages));
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, typing]);
+  }, [messages, typing, storageKey]);
 
   const triggerSearchQuery = (promptText) => {
     sendPrompt(promptText);
@@ -209,18 +204,8 @@ export const InsightEnginePage = () => {
   };
 
   const clearChat = () => {
-    const defaultMsg = [
-      {
-        role: 'assistant',
-        text: "Hello! I'm your CloudAtlas AI FinOps Consultant. I can help analyze your cloud cost predictions, budgets, anomalies, and provide recommendations. Ask me anything!",
-        functionCalled: 'none',
-        confidenceScore: null,
-        estimatedSavings: null,
-        data: null
-      }
-    ];
-    setMessages(defaultMsg);
-    localStorage.setItem('cloudatlas_chat_history', JSON.stringify(defaultMsg));
+    setMessages([]);
+    localStorage.removeItem(storageKey);
     setUploadedFile(null);
   };
 
@@ -393,6 +378,24 @@ export const InsightEnginePage = () => {
         }}>
           {/* Conversation Messages */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {messages.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '280px', padding: '40px 20px', textAlign: 'center' }}>
+                <div style={{
+                  width: '52px', height: '52px', borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.2))',
+                  border: '1px solid rgba(124,58,237,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px'
+                }}>
+                  <Sparkles size={26} color="#A78BFA" />
+                </div>
+                <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 600, color: '#F8FAFC', marginBottom: '6px' }}>
+                  CloudAtlas FinOps AI Assistant
+                </div>
+                <div style={{ fontSize: '13px', color: '#94A3B8', maxWidth: '440px', lineHeight: 1.5, marginBottom: '20px' }}>
+                  Ask any question about cloud cost optimization, monthly forecasts, anomaly alerts, or provider comparisons.
+                </div>
+              </div>
+            )}
             {messages.map((msg, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '8px' }}>
                 {msg.role === 'user' ? (

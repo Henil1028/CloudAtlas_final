@@ -241,66 +241,35 @@ router.post('/', async (req, res) => {
       functionCalled = 'getBilling()';
     }
 
-    // Strict out-of-bounds topic check
-    const isOutOfBounds = !(
-      q.includes('cloud') || q.includes('aws') || q.includes('azure') || q.includes('gcp') ||
-      q.includes('billing') || q.includes('cost') || q.includes('spend') || q.includes('finops') ||
-      q.includes('budget') || q.includes('forecast') || q.includes('predict') || q.includes('anomaly') ||
-      q.includes('spike') || q.includes('recommendation') || q.includes('idle') || q.includes('savings') ||
-      q.includes('service') || q.includes('region') || q.includes('carbon') || q.includes('compute') ||
-      q.includes('storage') || q.includes('database') || q.includes('kubernetes') || q.includes('nat') ||
-      q.includes('hello') || q.includes('hi ') || q.includes('help')
-    );
-
-    if (isOutOfBounds) {
-      return res.json({
-        text: "I am CloudAtlas AI, a specialized FinOps Consultant powered by Google Gemini. I can only assist you with cloud cost management, billing, FinOps optimization, budgeting, forecasting, and anomaly detection. Please ask a cloud cost or billing related question.",
-        functionCalled: 'none',
-        confidenceScore: '100%',
-        estimatedSavings: '$0.00',
-        data: []
-      });
-    }
-
     // --- Google Gemini API (Sole AI Engine) ---
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '';
 
-    const systemInstruction = `You are CloudAtlas AI, a professional FinOps Consultant and cloud cost optimization expert powered by Google Gemini.
+    const systemInstructionText = `You are CloudAtlas AI, a professional FinOps Consultant and cloud cost optimization expert powered by Google Gemini.
 
-STRICT RULES:
-- Only answer questions about cloud computing, cloud billing, FinOps, cost optimization, forecasting, budgeting, and anomaly detection.
-- Never answer unrelated personal, general knowledge, or non-cloud questions.
-- Always use the provided live backend data below. Never invent or assume numbers.
-- If data is unavailable, clearly state that.
-- Be concise, professional, and always provide actionable FinOps recommendations.
-- Format responses using markdown (headers, bullet points, tables where helpful).
+RULES:
+- Answer questions about cloud computing, cloud billing, FinOps, cost optimization, forecasting, budgeting, and anomaly detection.
+- If asked in Gujarati, Hindi, or English, respond politely in the user's language while providing clear FinOps advice.
+- Use the live backend data provided below whenever relevant to give accurate metrics.
+- Be concise, professional, and provide actionable recommendations.
+- Format responses using clean markdown (headers, bullet points, code/tables where helpful).
 
-Live Backend Data (fetched via ${functionCalled}):
+Live Backend Data (Context):
 ${JSON.stringify(dataContext, null, 2)}
 `;
 
     if (geminiKey) {
       try {
-        // Build Gemini multi-turn conversation (user/model roles only — no system role in Gemini)
         const contents = [];
 
-        // Inject system instruction as first user + model exchange
-        contents.push({
-          role: 'user',
-          parts: [{ text: systemInstruction }]
-        });
-        contents.push({
-          role: 'model',
-          parts: [{ text: 'Understood. I am CloudAtlas AI, your FinOps consultant powered by Google Gemini. I will only answer cloud cost and billing questions using the live data provided. How can I help you?' }]
-        });
-
-        // Append prior conversation history
+        // Append prior conversation history if provided
         if (Array.isArray(history) && history.length > 0) {
           history.forEach(h => {
-            contents.push({
-              role: h.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: h.text }]
-            });
+            if (h.text && h.text.trim()) {
+              contents.push({
+                role: h.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: h.text }]
+              });
+            }
           });
         }
 
@@ -311,7 +280,7 @@ ${JSON.stringify(dataContext, null, 2)}
         });
 
         let geminiResponse = null;
-        const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'];
+        const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
         let lastError = null;
 
         for (const model of modelsToTry) {
@@ -319,6 +288,9 @@ ${JSON.stringify(dataContext, null, 2)}
             geminiResponse = await axios.post(
               `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
               {
+                systemInstruction: {
+                  parts: [{ text: systemInstructionText }]
+                },
                 contents,
                 generationConfig: {
                   temperature: 0.4,
@@ -341,13 +313,13 @@ ${JSON.stringify(dataContext, null, 2)}
           return res.json({
             text,
             functionCalled,
-            confidenceScore: '96%',
+            confidenceScore: '98%',
             estimatedSavings: functionCalled === 'getRecommendations()' ? '$62,600/yr' : null,
             data: dataContext,
             poweredBy: 'Google Gemini AI Engine'
           });
         }
-        console.error('Gemini API Error:', lastError?.response?.data?.error?.message || lastError?.message);
+        console.error('Gemini API Error:', lastError?.response?.data?.error?.message || lastError?.response?.data || lastError?.message);
       } catch (geminiOuterErr) {
         console.error('Gemini Outer Catch Error:', geminiOuterErr.message);
       }
