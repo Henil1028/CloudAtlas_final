@@ -180,7 +180,12 @@ router.post('/', async (req, res) => {
     let functionCalled = '';
 
     // Fast memory-level data extraction
-    if (q.includes('provider') || q.includes('aws vs') || q.includes('compare aws')) {
+    const isGreeting = /^(\s*(hi|hello|hey|hola|kem\s*chho|kem\s*cho|kemcho|good\s*morning|good\s*afternoon|hie|hii+)\b\s*|\s*hi\s*!*)$/i.test(message.trim()) || q === 'hi' || q === 'hello' || q === 'hey' || q === 'kem chho';
+
+    if (isGreeting) {
+      functionCalled = 'none';
+      dataContext.greeting = true;
+    } else if (q.includes('provider') || q.includes('aws vs') || q.includes('compare aws')) {
       dataContext.providerSpend = getProviderCostsFromRecords(allRecords);
       functionCalled = 'getProviderCost()';
     } else if (q.includes('service') || q.includes('highest cost')) {
@@ -316,7 +321,20 @@ ${JSON.stringify(dataContext, null, 2)}
     let confidence = '95%';
     let savings = '$0.00';
 
-    if (functionCalled === 'getProviderCost()') {
+    if (isGreeting || dataContext.greeting) {
+      const userName = req.user?.name ? req.user.name : 'there';
+      responseText = `Hello ${userName}! 👋
+
+I'm your **CloudAtlas AI FinOps Consultant**. How can I assist you with your cloud cost management today?
+
+Here are a few popular questions you can ask me:
+* 📊 **"Compare AWS vs Azure spending"**
+* 🔮 **"Predict next month's bill"**
+* ⚠️ **"Find cost anomalies"**
+* 💡 **"Suggest cost optimizations"**
+* 🏷️ **"Show idle resources"**`;
+    }
+    else if (functionCalled === 'getProviderCost()') {
       const breakdown = dataContext.providerSpend.map(p => `* **${p.provider}**: $${p.cost.toLocaleString()}`).join('\n');
       const total = dataContext.providerSpend.reduce((sum, p) => sum + p.cost, 0);
       responseText = `### Executive Provider Cost Summary
