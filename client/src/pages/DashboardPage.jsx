@@ -14,6 +14,7 @@ import { TiltCard } from '../components/common/TiltCard';
 import { EmptyState } from '../components/console/EmptyState';
 import api from '../services/api';
 import { useDataContext } from '../context/DataContext';
+import { calculateRiskScore } from '../utils/riskCalculator';
 
 const relativeTime = (dateStr) => {
   if (!dateStr) return 'Unknown';
@@ -131,10 +132,8 @@ export const DashboardPage = () => {
   }, [summary, hasData]);
 
   const dynamicRiskScore = React.useMemo(() => {
-    if (!hasData || !summary.serviceSpend || summary.serviceSpend.length === 0) return 0;
-    const topCost = summary.serviceSpend[0]?.cost || 0;
-    const concentrationPct = (topCost / (summary.totalCost || 1)) * 100;
-    return Math.min(95, Math.max(20, Math.round(concentrationPct * 1.2 + 25)));
+    if (!hasData) return 0;
+    return calculateRiskScore(summary);
   }, [summary, hasData]);
 
   const kpis = [
@@ -266,7 +265,7 @@ export const DashboardPage = () => {
 
   const dynamicPredictions = hasData ? [
     { model: 'XGBoost Cost', result: `$${Math.round((summary.totalCost || 0) * 1.05).toLocaleString()}`, confidence: Math.round(baseConfidence), trend: 'up' },
-    { model: 'Risk Classifier', result: summary.totalCost > 100000 ? 'High Risk' : summary.totalCost > 50000 ? 'Moderate Risk' : 'Low Risk', confidence: Math.round(baseConfidence * 0.94), trend: 'neutral' },
+    { model: 'Risk Classifier', result: dynamicRiskScore >= 70 ? 'High Risk' : dynamicRiskScore >= 40 ? 'Moderate Risk' : 'Low Risk', confidence: Math.round(baseConfidence * 0.94), trend: 'neutral' },
     { model: 'Anomaly OCSVM', result: `${Math.max(1, Math.floor((summary.totalRecords || 0) / 500))} Alert(s)`, confidence: Math.round(baseConfidence * 0.97), trend: 'up' },
   ] : [
     { model: 'XGBoost Cost', result: 'No Data', confidence: 0, trend: 'neutral' },
