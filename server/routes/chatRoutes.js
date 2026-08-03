@@ -7,10 +7,9 @@ const axios = require('axios');
 // All chat routes are protected
 router.use(protect);
 
-// --- Helper Functions to Query MongoDB Data ---
+// --- Ultra-Fast Helper Functions (Single DB Fetch) ---
 
-const getBillingDataSummary = async () => {
-  const data = await BillingData.find({});
+const getBillingDataSummaryFromRecords = (data) => {
   const totalCost = data.reduce((sum, item) => sum + item.cost, 0);
   return {
     totalRecords: data.length,
@@ -21,8 +20,7 @@ const getBillingDataSummary = async () => {
   };
 };
 
-const getProviderCosts = async () => {
-  const data = await BillingData.find({});
+const getProviderCostsFromRecords = (data) => {
   const providers = {};
   data.forEach(item => {
     providers[item.provider] = (providers[item.provider] || 0) + item.cost;
@@ -33,8 +31,7 @@ const getProviderCosts = async () => {
   }));
 };
 
-const getTopServices = async () => {
-  const data = await BillingData.find({});
+const getTopServicesFromRecords = (data) => {
   const services = {};
   data.forEach(item => {
     services[item.service] = (services[item.service] || 0) + item.cost;
@@ -44,8 +41,7 @@ const getTopServices = async () => {
     .sort((a, b) => b.cost - a.cost);
 };
 
-const getTopRegions = async () => {
-  const data = await BillingData.find({});
+const getTopRegionsFromRecords = (data) => {
   const regions = {};
   data.forEach(item => {
     regions[item.region] = (regions[item.region] || 0) + item.cost;
@@ -55,8 +51,7 @@ const getTopRegions = async () => {
     .sort((a, b) => b.cost - a.cost);
 };
 
-const getDailyCost = async () => {
-  const data = await BillingData.find({});
+const getDailyCostFromRecords = (data) => {
   const daily = {};
   data.forEach(item => {
     const dayStr = new Date(item.date).toISOString().split('T')[0];
@@ -65,18 +60,16 @@ const getDailyCost = async () => {
   return Object.keys(daily)
     .map(d => ({ date: d, cost: parseFloat(daily[d].toFixed(2)) }))
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-15); // Last 15 days
+    .slice(-15);
 };
 
-const getAnomalies = async () => {
-  const data = await BillingData.find({});
+const getAnomaliesFromRecords = (data) => {
   if (data.length === 0) return [];
   const mean = data.reduce((sum, item) => sum + item.cost, 0) / data.length;
   const variance = data.reduce((sum, item) => sum + Math.pow(item.cost - mean, 2), 0) / data.length;
   const stdDev = Math.sqrt(variance);
 
-  // Find items 1.5 standard deviations above mean or cost > 700
-  const anomalies = data
+  return data
     .filter(item => item.cost > mean + 1.5 * stdDev || item.cost > 700)
     .map(item => ({
       id: item._id,
@@ -87,14 +80,10 @@ const getAnomalies = async () => {
       date: new Date(item.date).toISOString().split('T')[0],
       deviationFactor: ((item.cost - mean) / (stdDev || 1)).toFixed(1),
     }));
-  return anomalies;
 };
 
-const getRecommendations = async () => {
-  const data = await BillingData.find({});
+const getRecommendationsFromRecords = (data) => {
   const recommendations = [];
-
-  // Rule-based recommendation engine checking live database
   const computeUnderutilized = data.filter(d => ['EC2', 'Virtual Machines', 'Compute Engine'].includes(d.service) && d.cost > 400);
   if (computeUnderutilized.length > 0) {
     recommendations.push({
@@ -128,10 +117,9 @@ const getRecommendations = async () => {
   return recommendations;
 };
 
-const getIdleResources = async () => {
-  const data = await BillingData.find({});
-  const idle = data
-    .filter(d => d.cost > 2.5 && d.cost < 20) // Low cost running assets
+const getIdleResourcesFromRecords = (data) => {
+  return data
+    .filter(d => d.cost > 2.5 && d.cost < 20)
     .slice(0, 5)
     .map((d, index) => ({
       resourceId: `res-vol-087${index}`,
@@ -142,11 +130,9 @@ const getIdleResources = async () => {
       status: 'Idle / Unattached',
       reason: 'No network request operations or CPU metrics recorded in 14 days.',
     }));
-  return idle;
 };
 
-const getBudgetStatus = async () => {
-  const data = await BillingData.find({});
+const getBudgetStatusFromRecords = (data) => {
   const totalCost = data.reduce((sum, item) => sum + item.cost, 0);
   return {
     budgetLimit: 200000.00,
@@ -157,8 +143,7 @@ const getBudgetStatus = async () => {
   };
 };
 
-const getMonthlyComparison = async () => {
-  const data = await BillingData.find({});
+const getMonthlyComparisonFromRecords = (data) => {
   const monthly = {};
   data.forEach(item => {
     const month = new Date(item.date).toLocaleString('default', { month: 'short' }) + ' ' + new Date(item.date).getFullYear();
@@ -170,8 +155,7 @@ const getMonthlyComparison = async () => {
   }));
 };
 
-const getCarbonEmissions = async () => {
-  const data = await BillingData.find({});
+const getCarbonEmissionsFromRecords = (data) => {
   const totalCost = data.reduce((sum, item) => sum + item.cost, 0);
   return {
     co2EquivalentKg: parseFloat((totalCost * 0.415).toFixed(2)),
@@ -188,44 +172,46 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Message is required' });
     }
 
+    // Fetch DB records ONCE for high-speed performance
+    const allRecords = await BillingData.find({}).lean();
+
     const q = message.toLowerCase();
     let dataContext = {};
     let functionCalled = '';
 
-    // Route query by keyword/intent (Function Calling matching)
+    // Fast memory-level data extraction
     if (q.includes('provider') || q.includes('aws vs') || q.includes('compare aws')) {
-      dataContext.providerSpend = await getProviderCosts();
+      dataContext.providerSpend = getProviderCostsFromRecords(allRecords);
       functionCalled = 'getProviderCost()';
     } else if (q.includes('service') || q.includes('highest cost')) {
-      dataContext.topServices = await getTopServices();
+      dataContext.topServices = getTopServicesFromRecords(allRecords);
       functionCalled = 'getTopServices()';
     } else if (q.includes('region')) {
-      dataContext.topRegions = await getTopRegions();
+      dataContext.topRegions = getTopRegionsFromRecords(allRecords);
       functionCalled = 'getTopRegions()';
     } else if (q.includes('daily') || q.includes('trend')) {
-      dataContext.dailySpend = await getDailyCost();
+      dataContext.dailySpend = getDailyCostFromRecords(allRecords);
       functionCalled = 'getDailyCost()';
     } else if (q.includes('anomaly') || q.includes('spike')) {
-      dataContext.anomalies = await getAnomalies();
+      dataContext.anomalies = getAnomaliesFromRecords(allRecords);
       functionCalled = 'getAnomalies()';
     } else if (q.includes('recommend') || q.includes('optimize') || q.includes('saving')) {
-      dataContext.recommendations = await getRecommendations();
+      dataContext.recommendations = getRecommendationsFromRecords(allRecords);
       functionCalled = 'getRecommendations()';
     } else if (q.includes('idle') || q.includes('unused')) {
-      dataContext.idleResources = await getIdleResources();
+      dataContext.idleResources = getIdleResourcesFromRecords(allRecords);
       functionCalled = 'getIdleResources()';
     } else if (q.includes('budget')) {
-      dataContext.budget = await getBudgetStatus();
+      dataContext.budget = getBudgetStatusFromRecords(allRecords);
       functionCalled = 'getBudget()';
     } else if (q.includes('compare') || q.includes('month over month') || q.includes('mom') || q.includes('monthly')) {
-      dataContext.monthlySpend = await getMonthlyComparison();
+      dataContext.monthlySpend = getMonthlyComparisonFromRecords(allRecords);
       functionCalled = 'getMonthlyComparison()';
     } else if (q.includes('carbon') || q.includes('emission') || q.includes('co2')) {
-      dataContext.carbon = await getCarbonEmissions();
+      dataContext.carbon = getCarbonEmissionsFromRecords(allRecords);
       functionCalled = 'getCarbonEmission()';
     } else if (q.includes('forecast') || q.includes('predict')) {
-      // Pull predictive data
-      const daily = await getDailyCost();
+      const daily = getDailyCostFromRecords(allRecords);
       const total = daily.reduce((sum, d) => sum + d.cost, 0);
       dataContext.forecast = {
         predictedMonthSpend: parseFloat((total * 1.15).toFixed(2)),
@@ -234,10 +220,9 @@ router.post('/', async (req, res) => {
       };
       functionCalled = 'getForecast()';
     } else {
-      // Default general billing overview RAG context
-      dataContext.billingSummary = await getBillingDataSummary();
-      dataContext.providerSpend = await getProviderCosts();
-      dataContext.recommendations = await getRecommendations();
+      dataContext.billingSummary = getBillingDataSummaryFromRecords(allRecords);
+      dataContext.providerSpend = getProviderCostsFromRecords(allRecords);
+      dataContext.recommendations = getRecommendationsFromRecords(allRecords);
       functionCalled = 'getBilling()';
     }
 
