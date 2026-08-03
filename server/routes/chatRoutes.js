@@ -270,7 +270,7 @@ ${JSON.stringify(dataContext, null, 2)}
         });
 
         let geminiResponse = null;
-        const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+        const modelsToTry = ['gemini-flash-latest', 'gemini-2.0-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.0-flash', 'gemini-pro-latest'];
         let lastError = null;
 
         for (const model of modelsToTry) {
