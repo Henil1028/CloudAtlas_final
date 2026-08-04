@@ -1152,6 +1152,150 @@ html.light-mode ::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 0 25px rgba(124, 58, 237, 0.2), 0 0 50px rgba(6, 182, 212, 0.1);
 }
 
+/* ============================================================
+   LIGHT MODE — ENTERPRISE LIGHT PALETTE (Vercel/Stripe Design)
+   ============================================================ */
+html.light-mode {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+html.light-mode body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+html.light-mode h1,
+html.light-mode h2,
+html.light-mode h3,
+html.light-mode h4,
+html.light-mode h5,
+html.light-mode h6 {
+  color: #0F172A !important;
+}
+
+html.light-mode p {
+  color: #475569 !important;
+}
+
+/* Glass Cards & Container Surfaces in Light Mode */
+html.light-mode .glass-card,
+html.light-mode .glass-card-sm,
+html.light-mode .console-card,
+html.light-mode .chart-card,
+html.light-mode div[class*="bg-slate-900"],
+html.light-mode div[class*="bg-slate-950"],
+html.light-mode div[class*="bg-slate-900/60"],
+html.light-mode div[class*="bg-slate-950/40"],
+html.light-mode div[class*="bg-slate-950/70"] {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+}
+
+html.light-mode .console-topbar {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+}
+
+html.light-mode .console-sidebar,
+html.light-mode aside {
+  background: #FFFFFF !important;
+  border-right: 1px solid #E2E8F0 !important;
+  box-shadow: 2px 0 10px rgba(15, 23, 42, 0.02) !important;
+}
+
+/* Text Highlighting in Light Mode */
+html.light-mode .text-slate-100,
+html.light-mode .text-slate-200,
+html.light-mode .text-white {
+  color: #0F172A !important;
+}
+
+html.light-mode .text-slate-300,
+html.light-mode .text-slate-400 {
+  color: #334155 !important;
+}
+
+html.light-mode .text-slate-500 {
+  color: #64748B !important;
+}
+
+/* Recharts & SVG Chart Customization in Light Mode */
+html.light-mode .recharts-cartesian-grid line {
+  stroke: rgba(0, 0, 0, 0.07) !important;
+}
+
+html.light-mode .recharts-text,
+html.light-mode .recharts-label {
+  fill: #334155 !important;
+}
+
+html.light-mode .recharts-default-tooltip {
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  color: #0F172A !important;
+}
+
+/* Inputs, Selects & Form Controls */
+html.light-mode input,
+html.light-mode select,
+html.light-mode textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+html.light-mode input::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Tables & Data Grids */
+html.light-mode table th {
+  background-color: #F8FAFC !important;
+  color: #334155 !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+html.light-mode table td {
+  border-bottom: 1px solid #F1F5F9 !important;
+  color: #1E293B !important;
+}
+
+html.light-mode table tr:hover td {
+  background-color: #F1F5F9 !important;
+}
+
+/* Interactive Buttons & Badges */
+html.light-mode button.bg-slate-800,
+html.light-mode button.bg-slate-900 {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+html.light-mode button.bg-slate-800:hover,
+html.light-mode button.bg-slate-900:hover {
+  background-color: #E2E8F0 !important;
+}
+
+/* Light Mode Custom Scrollbar */
+html.light-mode ::-webkit-scrollbar-track {
+  background: #F1F5F9 !important;
+}
+
+html.light-mode ::-webkit-scrollbar-thumb {
+  background: #CBD5E1 !important;
+  border-radius: 4px;
+}
+
+html.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8 !important;
+}
+
 
 
 
