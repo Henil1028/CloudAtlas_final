@@ -14,15 +14,22 @@ const uploadCSV = async (req, res) => {
       return res.status(400).json({ message: 'Please upload a CSV file' });
     }
 
-    const { provider } = req.body;
-    if (!provider || !['aws', 'azure', 'gcp'].includes(provider.toLowerCase())) {
-      // Clean up uploaded file
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({ message: 'Valid provider (aws, azure, gcp) is required' });
+    let { provider } = req.body;
+    const lowerName = req.file.originalname.toLowerCase();
+    
+    // Auto-detect provider if missing or filename explicitly mentions a provider
+    if (lowerName.includes('azure')) {
+      provider = 'azure';
+    } else if (lowerName.includes('gcp') || lowerName.includes('google')) {
+      provider = 'gcp';
+    } else if (lowerName.includes('aws') || lowerName.includes('amazon')) {
+      provider = 'aws';
+    } else if (!provider || !['aws', 'azure', 'gcp'].includes(provider.toLowerCase())) {
+      provider = 'aws';
     }
 
     // Run CSV validation service
-    const validation = await validateBillingCSV(req.file.path, provider.toLowerCase());
+    const validation = await validateBillingCSV(req.file.path, provider.toLowerCase(), req.file.originalname);
     if (!validation.isValid) {
       fs.unlinkSync(req.file.path);
 
@@ -440,7 +447,7 @@ const getUploadedFiles = async (req, res) => {
   try {
     // Super Admins and Admins see all uploaded files; regular users see only their own
     const isAdmin = ['super_admin', 'admin'].includes(req.user.role);
-    const filter = isAdmin ? {} : { uploadedBy: req.user._id };
+    const filter = isAdmin ? { recordCount: { $gt: 0 } } : { uploadedBy: req.user._id, recordCount: { $gt: 0 } };
     const files = await UploadedFile.find(filter)
       .sort({ createdAt: -1 })
       .limit(50);

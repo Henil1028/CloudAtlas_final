@@ -5,27 +5,26 @@ import {
   Cpu, Database, Network, Server, ArrowUpRight, CheckCircle2, AlertTriangle, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
+import { useDataContext } from '../context/DataContext';
 
 export const MigrationIntelligencePage = () => {
   const { token } = useAuth();
+  const { lastUploadTime, lastUploadFileId } = useDataContext();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [lastUploadTime, lastUploadFileId]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:8001/api/analytics/migration-intelligence', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
+      const fileQuery = lastUploadFileId ? `?fileId=${lastUploadFileId}` : '';
+      const res = await api.get(`/analytics/migration-intelligence${fileQuery}`);
+      if (res.data) {
+        setData(res.data);
       }
     } catch (err) {
       console.error('Failed to fetch migration intelligence:', err);

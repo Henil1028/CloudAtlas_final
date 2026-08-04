@@ -126,6 +126,14 @@ export const AnomalyDetectionPage = () => {
         });
         setDynamicTimeline(timeline);
 
+        // Read active provider name from uploaded CSV dataset summary
+        const detectedProv = summaryData?.records?.[0]?.provider
+          || (summaryData?.providerSpend && typeof summaryData.providerSpend === 'object'
+            ? Object.entries(summaryData.providerSpend).sort((a, b) => b[1] - a[1])[0]?.[0]
+            : null)
+          || 'azure';
+        const activeProviderName = String(detectedProv).toUpperCase();
+
         // Read serviceSpend from the summary API response (not stale React state)
         const serviceList = summaryData?.serviceSpend || [];
         let idx = 0;
@@ -136,14 +144,14 @@ export const AnomalyDetectionPage = () => {
             idx++;
             const pct = Math.round(((d.cost - avg) / avg) * 100);
             const severity = pct > 75 ? 'critical' : pct > 25 ? 'medium' : 'low';
-            const matchedService = serviceList[(idx - 1) % Math.max(serviceList.length, 1)]?.service || 'Compute Engine';
+            const matchedService = serviceList[(idx - 1) % Math.max(serviceList.length, 1)]?.service || (activeProviderName === 'AZURE' ? 'Virtual Machines' : activeProviderName === 'GCP' ? 'Compute Engine' : 'EC2');
             const dt = new Date(d.date);
             const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             return {
               id: `ANO-${String(idx).padStart(3, '0')}`,
               service: matchedService,
-              region: 'us-east-1',
-              provider: d.cost > avg * 1.8 ? 'AWS' : d.cost > avg * 1.4 ? 'Azure' : 'GCP',
+              region: activeProviderName === 'AZURE' ? 'eastus' : activeProviderName === 'GCP' ? 'us-central1' : 'us-east-1',
+              provider: activeProviderName,
               severity,
               message: `Cost spike on ${label}: +${pct}% vs daily average ($${Math.round(avg).toLocaleString()})`,
               cost: Math.round(d.cost),
@@ -183,6 +191,7 @@ export const AnomalyDetectionPage = () => {
       const daily = [...dataSummary.dailySpend].sort((a, b) => new Date(a.date) - new Date(b.date));
       const avg = daily.reduce((s, d) => s + d.cost, 0) / daily.length;
       const threshold = avg * 1.25;
+      const provName = (dataSummary?.records?.[0]?.provider || 'azure').toUpperCase();
       let idx = 0;
       return daily
         .filter(d => d.cost > threshold)
@@ -194,9 +203,9 @@ export const AnomalyDetectionPage = () => {
           const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           return {
             id: `ANO-${String(idx).padStart(3, '0')}`,
-            service: dataSummary?.serviceSpend?.[idx - 1]?.service || 'Compute Engine',
-            region: 'us-east-1',
-            provider: d.cost > avg * 1.8 ? 'AWS' : d.cost > avg * 1.4 ? 'Azure' : 'GCP',
+            service: dataSummary?.serviceSpend?.[idx - 1]?.service || (provName === 'AZURE' ? 'Virtual Machines' : provName === 'GCP' ? 'Compute Engine' : 'EC2'),
+            region: provName === 'AZURE' ? 'eastus' : provName === 'GCP' ? 'us-central1' : 'us-east-1',
+            provider: provName,
             severity: pct > 75 ? 'critical' : pct > 25 ? 'medium' : 'low',
             message: `Cost spike on ${label}: +${pct}% vs daily average ($${Math.round(avg).toLocaleString()})`,
             cost: Math.round(d.cost),

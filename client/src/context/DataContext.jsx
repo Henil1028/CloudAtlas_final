@@ -17,12 +17,28 @@ const DataContext = createContext({
 });
 
 export const DataContextProvider = ({ children }) => {
-  const [lastUploadTime, setLastUploadTime] = useState(null);
-  const [lastUploadFileId, setLastUploadFileId] = useState(null);
+  const [lastUploadTime, setLastUploadTime] = useState(() => Date.now());
+  const [lastUploadFileId, setLastUploadFileId] = useState(() => {
+    try {
+      return localStorage.getItem('cloudatlas_active_file_id') || null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   const notifyUpload = useCallback((fileId = null) => {
     setLastUploadTime(Date.now());
-    setLastUploadFileId(fileId || null);
+    if (fileId) {
+      setLastUploadFileId(fileId);
+      try {
+        localStorage.setItem('cloudatlas_active_file_id', fileId);
+      } catch (e) {}
+    } else {
+      setLastUploadFileId(null);
+      try {
+        localStorage.removeItem('cloudatlas_active_file_id');
+      } catch (e) {}
+    }
   }, []);
 
   return (

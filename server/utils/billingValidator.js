@@ -5,7 +5,7 @@ const normalizeHeader = (h) => {
   return h.trim().toLowerCase().replace(/[\s\-_]/g, '');
 };
 
-const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
+const validateBillingCSV = (filePath, defaultProvider = 'aws', originalName = '') => {
   return new Promise((resolve, reject) => {
     const results = [];
     const errors = [];
@@ -55,9 +55,10 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
         const costVal = normalizedRow['cost'] || normalizedRow['spend'] || normalizedRow['amount'] || normalizedRow['totalcost'] || normalizedRow['unblendedcost'];
         const regionVal = normalizedRow['region'] || normalizedRow['location'] || normalizedRow['zone'] || 'us-east-1';
         const usageTypeVal = normalizedRow['usagetype'] || normalizedRow['type'] || normalizedRow['usage'] || 'StandardUsage';
+
         // Auto-detect provider based on filename and row contents/headers
         let detectedProvider = defaultProvider;
-        const fnameStr = String(filePath || '').toLowerCase();
+        const fnameStr = String(originalName || filePath || '').toLowerCase();
         if (fnameStr.includes('azure')) detectedProvider = 'azure';
         else if (fnameStr.includes('gcp') || fnameStr.includes('google')) detectedProvider = 'gcp';
         else if (fnameStr.includes('aws') || fnameStr.includes('amazon')) detectedProvider = 'aws';
@@ -67,7 +68,7 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws') => {
           detectedProvider = 'azure';
         } else if (rowStr.includes('gcp') || rowStr.includes('google') || rowStr.includes('bigquery') || rowStr.includes('compute engine') || rowStr.includes('cloud storage')) {
           detectedProvider = 'gcp';
-        } else if (rowStr.includes('aws') || rowStr.includes('ec2') || rowStr.includes('s3') || rowStr.includes('unblendedcost') || rowStr.includes('amazon')) {
+        } else if (!fnameStr.includes('azure') && !fnameStr.includes('gcp') && (rowStr.includes('aws') || rowStr.includes('ec2') || rowStr.includes('s3') || rowStr.includes('unblendedcost') || rowStr.includes('amazon'))) {
           detectedProvider = 'aws';
         }
 

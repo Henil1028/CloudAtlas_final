@@ -364,77 +364,125 @@ export const InsightEnginePage = () => {
           </div>
         </div>
 
-        {/* Chat Body */}
+        {/* Chat Body Container */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          background: 'rgba(15,23,42,0.4)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: '16px',
+          background: 'rgba(10, 15, 30, 0.65)',
+          backdropFilter: 'blur(30px)',
+          WebkitBackdropFilter: 'blur(30px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '20px',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
           overflow: 'hidden',
+          position: 'relative',
         }}>
           {/* Conversation Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {messages.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '280px', padding: '40px 20px', textAlign: 'center' }}>
-                <div style={{
-                  width: '52px', height: '52px', borderRadius: '16px',
-                  background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.2))',
-                  border: '1px solid rgba(124,58,237,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px'
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '340px', padding: '20px', textAlign: 'center' }}>
+                
+                {/* Glowing Animated Orb */}
+                <div className="ai-orb-glow" style={{
+                  width: '64px', height: '64px', borderRadius: '20px',
+                  background: 'linear-gradient(135deg, #7C3AED, #06B6D4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: '20px',
                 }}>
-                  <Sparkles size={26} color="#A78BFA" />
+                  <Sparkles size={32} color="#FFFFFF" />
                 </div>
-                <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 600, color: '#F8FAFC', marginBottom: '6px' }}>
-                  CloudAtlas FinOps AI Assistant
+
+                <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '22px', fontWeight: 700, background: 'linear-gradient(135deg, #FFFFFF 30%, #A78BFA 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>
+                  CloudAtlas AI Intelligence
                 </div>
-                <div style={{ fontSize: '13px', color: '#94A3B8', maxWidth: '440px', lineHeight: 1.5, marginBottom: '20px' }}>
-                  Ask any question about cloud cost optimization, monthly forecasts, anomaly alerts, or provider comparisons.
+                
+                <div style={{ fontSize: '13.5px', color: '#94A3B8', maxWidth: '480px', lineHeight: 1.6, marginBottom: '32px' }}>
+                  Your personal FinOps copilot powered by Google Gemini. Ask any question about cloud costs, forecasts, anomalies, code, or architecture.
                 </div>
+
+                {/* 2x2 Interactive Quick Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%', maxWidth: '580px' }}>
+                  {PROMPT_BUTTONS.map(pb => (
+                    <div
+                      key={pb.key}
+                      className="chat-prompt-card"
+                      onClick={() => triggerSearchQuery(pb.prompt)}
+                      style={{
+                        padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left'
+                      }}
+                    >
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+                        background: `${pb.color}15`, border: `1px solid ${pb.color}30`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        <pb.icon size={18} color={pb.color} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#F8FAFC', marginBottom: '2px' }}>{pb.label}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>{pb.prompt}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
               </div>
             )}
+
+            {/* Messages Feed */}
             {messages.map((msg, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '8px' }}>
                 {msg.role === 'user' ? (
                   <div style={{
-                    maxWidth: '75%', padding: '12px 16px',
-                    background: 'rgba(124,58,237,0.15)',
-                    border: '1px solid rgba(124,58,237,0.25)',
-                    borderRadius: '12px 12px 4px 12px',
-                    fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#F1F5F9', lineHeight: 1.5,
+                    maxWidth: '75%', padding: '14px 18px',
+                    background: 'linear-gradient(135deg, rgba(124,58,237,0.22), rgba(6,182,212,0.15))',
+                    border: '1px solid rgba(124,58,237,0.35)',
+                    boxShadow: '0 8px 24px -6px rgba(124,58,237,0.3)',
+                    borderRadius: '16px 16px 4px 16px',
+                    fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#F8FAFC', lineHeight: 1.55,
                   }}>
                     {msg.text}
                   </div>
                 ) : (
-                  <div style={{ maxWidth: '85%', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{ maxWidth: '88%', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                    
+                    {/* Glowing AI Avatar */}
                     <div style={{
-                      width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
+                      width: '36px', height: '36px', borderRadius: '12px', flexShrink: 0,
                       background: 'linear-gradient(135deg, #7C3AED, #06B6D4)',
+                      boxShadow: '0 0 20px rgba(124, 58, 237, 0.4)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px',
                     }}>
-                      <Bot size={15} color="#fff" />
+                      <Bot size={18} color="#FFFFFF" />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                      
+                      {/* AI Bubble Body */}
                       <div className="markdown-chat-body" style={{
-                        padding: '14px 18px',
-                        background: 'rgba(255,255,255,0.025)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        borderRadius: '4px 14px 14px 14px',
-                        fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#94A3B8', lineHeight: 1.6,
+                        padding: '16px 20px',
+                        background: 'rgba(15, 23, 42, 0.55)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '4px 18px 18px 18px',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                        fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#CBD5E1', lineHeight: 1.65,
                       }}>
                         <ReactMarkdown>{msg.text}</ReactMarkdown>
 
-                        {/* Render inline Recharts visualizations */}
+                        {/* Inline Charts */}
                         <AIChartRenderer data={msg.data} functionCalled={msg.functionCalled} />
                       </div>
 
-                      {/* Message Meta Info & Toolbar */}
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingLeft: '8px', fontSize: '11px', color: '#64748B' }}>
+                      {/* Meta Footer & Badges */}
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', paddingLeft: '4px', fontSize: '11.5px', color: '#64748B' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#A78BFA', fontWeight: 500 }}>
+                          <Sparkles size={11} color="#A78BFA" /> Google Gemini AI
+                        </span>
                         {msg.functionCalled && msg.functionCalled !== 'none' && (
-                          <span style={{ fontFamily: 'monospace', color: '#A78BFA' }}>RAG: {msg.functionCalled}</span>
-                        )}
-                        {msg.confidenceScore && (
-                          <span>Score: {msg.confidenceScore}</span>
+                          <span style={{ fontFamily: 'monospace', color: '#38BDF8', background: 'rgba(56,189,248,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                            RAG: {msg.functionCalled}
+                          </span>
                         )}
                         {msg.estimatedSavings && (
                           <span style={{ color: '#22C55E', fontWeight: 600 }}>Est. Savings: {msg.estimatedSavings}</span>
@@ -442,27 +490,34 @@ export const InsightEnginePage = () => {
                         <button
                           onClick={() => copyToClipboard(msg.text, i)}
                           style={{
-                            background: 'none', border: 'none', color: '#4A5568', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '3px', transition: 'color 0.2s'
+                            background: 'none', border: 'none', color: '#64748B', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', transition: 'color 0.2s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.color = '#CBD5E0'}
-                          onMouseLeave={e => e.currentTarget.style.color = '#4A5568'}
+                          onMouseEnter={e => e.currentTarget.style.color = '#F1F5F9'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#64748B'}
                         >
-                          {copiedIndex === i ? <Check size={11} color="#22C55E" /> : <Copy size={11} />}
+                          {copiedIndex === i ? <Check size={12} color="#22C55E" /> : <Copy size={12} />}
                           {copiedIndex === i ? 'Copied' : 'Copy'}
                         </button>
                       </div>
+
                     </div>
                   </div>
                 )}
               </div>
             ))}
+
             {typing && (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #7C3AED, #06B6D4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Sparkles size={14} color="#fff" />
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '12px', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #7C3AED, #06B6D4)',
+                  boxShadow: '0 0 20px rgba(124, 58, 237, 0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Sparkles size={18} color="#FFFFFF" />
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px 14px 14px 14px' }}>
+                <div style={{ background: 'rgba(15, 23, 42, 0.55)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '4px 18px 18px 18px' }}>
                   <TypingIndicator />
                 </div>
               </div>
@@ -470,45 +525,48 @@ export const InsightEnginePage = () => {
             <div ref={bottomRef} />
           </div>
 
-          {/* Upload preview */}
+          {/* Upload File Attachment Bar */}
           {uploadedFile && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '8px 20px', background: 'rgba(124,58,237,0.08)',
-              borderTop: '1px solid rgba(124,58,237,0.15)',
-              fontSize: '12px', color: '#A78BFA',
+              padding: '10px 24px', background: 'rgba(124,58,237,0.12)',
+              borderTop: '1px solid rgba(124,58,237,0.2)',
+              fontSize: '12px', color: '#C084FC',
             }}>
-              <FileText size={13} />
-              <span>Attached: <strong>{uploadedFile.name}</strong> ({uploadedFile.size})</span>
+              <FileText size={14} />
+              <span>Attached Document: <strong>{uploadedFile.name}</strong> ({uploadedFile.size})</span>
               <button
                 onClick={() => setUploadedFile(null)}
                 style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}
               >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
               </button>
             </div>
           )}
 
-          {/* Message Input Box */}
+          {/* Ultra-Sleek Floating Input Container */}
           <div style={{
-            padding: '16px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            background: 'rgba(8,17,31,0.4)',
-            display: 'flex', gap: '10px', alignItems: 'flex-end',
+            padding: '18px 24px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(8, 13, 26, 0.75)',
+            backdropFilter: 'blur(20px)',
+            display: 'flex', gap: '12px', alignItems: 'flex-end',
           }}>
             <button
               onClick={() => fileInputRef.current.click()}
+              title="Attach CSV / File"
               style={{
-                width: '42px', height: '42px', borderRadius: '10px',
+                width: '44px', height: '44px', borderRadius: '12px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                color: '#A0AEC0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#94A3B8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.2s', flexShrink: 0,
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,58,237,0.4)'; e.currentTarget.style.color = '#A78BFA'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#94A3B8'; }}
             >
-              <Paperclip size={16} />
+              <Paperclip size={18} />
             </button>
+
             <input
               type="file"
               ref={fileInputRef}
@@ -517,22 +575,24 @@ export const InsightEnginePage = () => {
               accept=".csv,.pdf"
             />
 
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } }}
-              placeholder="Ask a cloud billing or FinOps optimization question... (Enter to send)"
-              rows={2}
-              style={{
-                flex: 1, background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
-                padding: '10px 14px', color: '#F1F5F9', fontSize: '14px',
-                fontFamily: 'Inter, sans-serif', outline: 'none', resize: 'none',
-                lineHeight: 1.5,
-              }}
-              onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.4)'; }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-            />
+            <div className="chat-input-focus-wrapper" style={{
+              flex: 1, borderRadius: '14px', background: 'rgba(15, 23, 42, 0.6)',
+              overflow: 'hidden', display: 'flex', alignItems: 'center'
+            }}>
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } }}
+                placeholder="Ask CloudAtlas AI any question... (Press Enter to send)"
+                rows={2}
+                style={{
+                  width: '100%', background: 'transparent',
+                  border: 'none', padding: '12px 16px', color: '#F8FAFC', fontSize: '14px',
+                  fontFamily: 'Inter, sans-serif', outline: 'none', resize: 'none',
+                  lineHeight: 1.5,
+                }}
+              />
+            </div>
 
             <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
               {messages.length > 2 && (
@@ -540,15 +600,15 @@ export const InsightEnginePage = () => {
                   onClick={regenerateResponse}
                   title="Regenerate Last Response"
                   style={{
-                    width: '42px', height: '42px', borderRadius: '10px',
+                    width: '44px', height: '44px', borderRadius: '12px',
                     background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#A0AEC0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#94A3B8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.2s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = '#F8FAFC'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#94A3B8'; }}
                 >
-                  <RotateCcw size={15} />
+                  <RotateCcw size={16} />
                 </button>
               )}
 
@@ -556,15 +616,16 @@ export const InsightEnginePage = () => {
                 onClick={() => sendPrompt()}
                 disabled={!input.trim() && !uploadedFile || typing}
                 style={{
-                  width: '42px', height: '42px', borderRadius: '10px',
-                  background: (input.trim() || uploadedFile) && !typing ? 'linear-gradient(135deg, #7C3AED, #6D28D9)' : 'rgba(255,255,255,0.03)',
-                  border: 'none', color: (input.trim() || uploadedFile) && !typing ? '#fff' : '#4A5568',
+                  width: '44px', height: '44px', borderRadius: '12px',
+                  background: (input.trim() || uploadedFile) && !typing ? 'linear-gradient(135deg, #7C3AED, #06B6D4)' : 'rgba(255,255,255,0.03)',
+                  boxShadow: (input.trim() || uploadedFile) && !typing ? '0 4px 20px rgba(124, 58, 237, 0.4)' : 'none',
+                  border: 'none', color: (input.trim() || uploadedFile) && !typing ? '#FFFFFF' : '#475569',
                   cursor: (input.trim() || uploadedFile) && !typing ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.25s ease',
                 }}
               >
-                <Send size={16} />
+                <Send size={18} />
               </button>
             </div>
           </div>

@@ -302,6 +302,11 @@ export const PredictionsPage = () => {
         // 4. Formulate dynamic service breakdown
         const serviceList = summary?.serviceSpend || [];
         const top3 = serviceList.slice(0, 3);
+        const s1Name = top3[0]?.service || (detectedProv === 'azure' ? 'Virtual Machines' : detectedProv === 'gcp' ? 'Compute Engine' : 'EC2');
+        const s2Name = top3[1]?.service || (detectedProv === 'azure' ? 'Blob Storage' : detectedProv === 'gcp' ? 'Cloud Storage' : 'S3');
+        const s3Name = top3[2]?.service || (detectedProv === 'azure' ? 'AKS' : detectedProv === 'gcp' ? 'GKE' : 'EKS');
+        setTopServiceNames([s1Name, s2Name, s3Name]);
+
         const s1Cost = top3[0]?.cost || ((summary.totalCost || 1) * 0.45);
         const s2Cost = top3[1]?.cost || ((summary.totalCost || 1) * 0.30);
         const s3Cost = top3[2]?.cost || ((summary.totalCost || 1) * 0.25);
@@ -316,9 +321,9 @@ export const PredictionsPage = () => {
           const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           return {
             date: label,
-            EC2: Number((d.cost * ratio1).toFixed(2)),
-            S3: Number((d.cost * ratio2).toFixed(2)),
-            EKS: Number((d.cost * ratio3).toFixed(2)),
+            s1: Number((d.cost * ratio1).toFixed(2)),
+            s2: Number((d.cost * ratio2).toFixed(2)),
+            s3: Number((d.cost * ratio3).toFixed(2)),
             isFuture: false
           };
         });
@@ -331,9 +336,9 @@ export const PredictionsPage = () => {
           const multiplier = 1 + (Math.sin(i) * 0.08);
           servicesFuture.push({
             date: label,
-            fEC2: Number((avg * ratio1 * multiplier).toFixed(2)),
-            fS3: Number((avg * ratio2 * multiplier).toFixed(2)),
-            fEKS: Number((avg * ratio3 * multiplier).toFixed(2)),
+            fs1: Number((avg * ratio1 * multiplier).toFixed(2)),
+            fs2: Number((avg * ratio2 * multiplier).toFixed(2)),
+            fs3: Number((avg * ratio3 * multiplier).toFixed(2)),
             isFuture: true,
             isForecastSpike: i === 2 || i === 5
           });
@@ -406,6 +411,7 @@ export const PredictionsPage = () => {
   const fmtDate = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--';
   const fmtDateShort = (d) => d ? `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}` : null;
 
+  const [topServiceNames, setTopServiceNames] = useState(['EC2', 'S3', 'EKS']);
   const [trendsData, setTrendsData] = useState({ historical: null, future: null });
   const [servicesData, setServicesData] = useState({ historical: null, future: null });
 
@@ -435,13 +441,13 @@ export const PredictionsPage = () => {
     const histSource = servicesData.historical;
     const futureSource = servicesData.future || [];
 
-    const hist = histSource.map(d => ({ ...d, fEC2: null, fS3: null, fEKS: null }));
+    const hist = histSource.map(d => ({ ...d, fs1: null, fs2: null, fs3: null }));
     const future = showFuture ? futureSource : [];
     if (future.length && hist.length) {
       const last = hist[hist.length - 1];
       return [
         ...hist.slice(0, -1),
-        { ...last, fEC2: last.EC2, fS3: last.S3, fEKS: last.EKS },
+        { ...last, fs1: last.s1, fs2: last.s2, fs3: last.s3 },
         ...future.slice(1)
       ];
     }
@@ -499,7 +505,7 @@ export const PredictionsPage = () => {
     const data = type === 'anomaly' ? filterAnomalyData() : filterServicesData();
     let csv = type === 'anomaly'
       ? 'Date,Historical Value,Forecast Value,Anomaly\n' + data.map(r => `${r.date},${r.value || ''},${r.futureValue || ''},${r.isAnomaly ? 'YES' : r.predictedAnomaly ? 'FORECAST' : ''}`).join('\n')
-      : 'Date,EC2,S3,EKS,Forecast EC2,Forecast S3,Forecast EKS,Spike\n' + data.map(r => `${r.date},${r.EC2 || ''},${r.S3 || ''},${r.EKS || ''},${r.fEC2 || ''},${r.fS3 || ''},${r.fEKS || ''},${r.isForecastSpike ? 'YES' : ''}`).join('\n');
+      : `Date,${topServiceNames[0]},${topServiceNames[1]},${topServiceNames[2]},Forecast ${topServiceNames[0]},Forecast ${topServiceNames[1]},Forecast ${topServiceNames[2]},Spike\n` + data.map(r => `${r.date},${r.s1 || ''},${r.s2 || ''},${r.s3 || ''},${r.fs1 || ''},${r.fs2 || ''},${r.fs3 || ''},${r.isForecastSpike ? 'YES' : ''}`).join('\n');
     const uri = encodeURI('data:text/csv;charset=utf-8,' + csv);
     const a = document.createElement('a'); a.setAttribute('href', uri);
     a.setAttribute('download', `${type}_with_forecast_${activeRange}.csv`);
@@ -733,16 +739,16 @@ export const PredictionsPage = () => {
           <ReferenceLine x={data.filter(d => !d.isFuture).slice(-1)[0]?.date || 'Jun 01'} stroke="rgba(59,130,246,0.5)" strokeDasharray="4 3" label={{ value: 'TODAY', position: 'top', fill: '#3B82F6', fontSize: 9, fontWeight: 700 }} />
 
           {/* Historical bars */}
-          <Bar dataKey="EC2" name="EC2" stackId="hist" fill="#8B5CF6" />
-          <Bar dataKey="S3" name="S3" stackId="hist" fill="#3B82F6" />
-          <Bar dataKey="EKS" name="EKS" stackId="hist" fill="#EC4899" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="s1" name={topServiceNames[0]} stackId="hist" fill="#8B5CF6" />
+          <Bar dataKey="s2" name={topServiceNames[1]} stackId="hist" fill="#3B82F6" />
+          <Bar dataKey="s3" name={topServiceNames[2]} stackId="hist" fill="#EC4899" radius={[3, 3, 0, 0]} />
 
           {/* Future forecast bars (dashed outline style via opacity) */}
           {showFuture && (
             <>
-              <Bar dataKey="fEC2" name="EC2 (Forecast)" stackId="future" fill="rgba(139,92,246,0.45)" />
-              <Bar dataKey="fS3" name="S3 (Forecast)" stackId="future" fill="rgba(59,130,246,0.45)" />
-              <Bar dataKey="fEKS" name="EKS (Forecast)" stackId="future" fill="rgba(236,72,153,0.45)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="fs1" name={`${topServiceNames[0]} (Forecast)`} stackId="future" fill="rgba(139,92,246,0.45)" />
+              <Bar dataKey="fs2" name={`${topServiceNames[1]} (Forecast)`} stackId="future" fill="rgba(59,130,246,0.45)" />
+              <Bar dataKey="fs3" name={`${topServiceNames[2]} (Forecast)`} stackId="future" fill="rgba(236,72,153,0.45)" radius={[3, 3, 0, 0]} />
             </>
           )}
 
@@ -1324,7 +1330,7 @@ export const PredictionsPage = () => {
           <div className="glass-card" style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Outfit' }}>Cost by AWS Services</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Outfit' }}>Cost by {(form.provider || 'AWS').toUpperCase()} Services</div>
                 <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', fontFamily: 'Inter' }}>
                   {showFuture ? 'Solid = historical  ·  Semi-transparent = ML forecast' : 'Showing historical only'}
                   {' · Brush to scroll'}
@@ -1360,7 +1366,7 @@ export const PredictionsPage = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', textAlign: 'left', fontFamily: 'Inter' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#475569' }}>
-                    {['DATE', 'DATADOG', 'AWS', 'SNOWFLAKE', 'KUBERNETES', 'TREND'].map(h => (
+                    {['DATE', 'DATADOG', (form.provider || 'AWS').toUpperCase(), 'SNOWFLAKE', 'KUBERNETES', 'TREND'].map(h => (
                       <th key={h} style={{ padding: '8px 10px', fontWeight: 600 }}>{h}</th>
                     ))}
                   </tr>
@@ -1392,21 +1398,21 @@ export const PredictionsPage = () => {
             </div>
           </div>
 
-          {/* AWS Cost Guard */}
+          {/* Provider Cost Guard */}
           <div style={{ padding: '22px', borderRadius: '14px', background: 'rgba(254,242,242,0.04)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#EF4444', display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 10px', fontFamily: 'Outfit' }}>
-                <AlertTriangle size={15} /> AWS Cost Guard
+                <AlertTriangle size={15} /> {(form.provider || 'AWS').toUpperCase()} Cost Guard
               </h3>
               <p style={{ fontSize: '13px', color: '#FCA5A5', lineHeight: 1.6, margin: 0, fontFamily: 'Inter' }}>
-                On <strong>05/09/2026</strong> the service <strong style={{ color: '#F87171' }}>AmazonEC2</strong> cost has increased by{' '}
+                On <strong>05/09/2026</strong> the service <strong style={{ color: '#F87171' }}>{form.provider === 'azure' ? 'Virtual Machines' : form.provider === 'gcp' ? 'Compute Engine' : 'AmazonEC2'}</strong> cost has increased by{' '}
                 <strong style={{ color: '#EF4444' }}>↑31%</strong> vs the last 7 days.
               </p>
             </div>
             {showFuture && (
               <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '8px' }}>
                 <p style={{ fontSize: '11.5px', color: '#FCD34D', fontFamily: 'Inter', margin: 0, lineHeight: 1.5 }}>
-                  ⚡ <strong>Forecast Alert:</strong> Model predicts another EC2 spike on <strong>Jun 13</strong> (+88%) and potential budget cap breach by <strong>Jun 25</strong>.
+                  ⚡ <strong>Forecast Alert:</strong> Model predicts another {form.provider === 'azure' ? 'VM' : form.provider === 'gcp' ? 'Compute' : 'EC2'} spike on <strong>Jun 13</strong> (+88%) and potential budget cap breach by <strong>Jun 25</strong>.
                 </p>
               </div>
             )}
@@ -1429,9 +1435,9 @@ export const PredictionsPage = () => {
               </thead>
               <tbody>
                 {[
-                  { area: 'AWS EC2 (us-east-1)', obs: 'Idle compute scale-set detected', action: 'Downgrade to t3.medium during off-peak', savings: '$4,200', priority: 'High', color: '#EF4444' },
-                  { area: 'GCP Cloud Storage', obs: 'Old backups in Standard Tier', action: 'Lifecycle rule → Archive after 30 days', savings: '$3,150', priority: 'Medium', color: '#F59E0B' },
-                  { area: 'Azure AKS', obs: 'Unused memory in dev namespaces', action: 'Enable horizontal pod autoscaling', savings: '$2,800', priority: 'Low', color: '#06B6D4' }
+                  { area: form.provider === 'azure' ? 'Azure Virtual Machines (eastus)' : form.provider === 'gcp' ? 'GCP Compute Engine (us-central1)' : 'AWS EC2 (us-east-1)', obs: 'Idle compute scale-set detected', action: form.provider === 'azure' ? 'Downgrade to Standard_B2s off-peak' : 'Downgrade to t3.medium off-peak', savings: '$4,200', priority: 'High', color: '#EF4444' },
+                  { area: form.provider === 'azure' ? 'Azure Blob Storage' : form.provider === 'gcp' ? 'GCP Cloud Storage' : 'AWS S3 Storage', obs: 'Old backups in Standard Tier', action: 'Lifecycle rule → Archive after 30 days', savings: '$3,150', priority: 'Medium', color: '#F59E0B' },
+                  { area: form.provider === 'azure' ? 'Azure AKS' : form.provider === 'gcp' ? 'GCP GKE' : 'AWS EKS', obs: 'Unused memory in dev namespaces', action: 'Enable horizontal pod autoscaling', savings: '$2,800', priority: 'Low', color: '#06B6D4' }
                 ].map((row, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', color: '#CBD5E1' }}>
                     <td style={{ padding: '10px', fontWeight: 700 }}>{row.area}</td>
@@ -1466,7 +1472,7 @@ export const PredictionsPage = () => {
               </div>
 
               <h2 style={{ fontSize: '18px', fontWeight: 800, fontFamily: 'Outfit', color: '#fff', marginBottom: '4px' }}>
-                {maximizedChart === 'anomaly' ? 'Anomaly Detection' : 'Cost by AWS Services'} — Zoom View
+                {maximizedChart === 'anomaly' ? 'Anomaly Detection' : `Cost by ${(form.provider || 'AWS').toUpperCase()} Services`} — Zoom View
               </h2>
               <p style={{ fontSize: '11.5px', color: '#475569', marginBottom: '20px' }}>
                 {showFuture ? '🟣 Solid = historical data  |  🟡 Dashed/Transparent = ML forecast  |  🔴 Dots = anomaly/spike events' : 'Showing historical data only. Toggle "Show Forecast" to see future projections.'}

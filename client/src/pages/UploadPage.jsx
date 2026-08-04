@@ -42,6 +42,14 @@ export const UploadPage = () => {
     }
   };
 
+  const autoDetectProvider = (fileName) => {
+    const lower = fileName.toLowerCase();
+    if (lower.includes('azure')) return 'azure';
+    if (lower.includes('gcp') || lower.includes('google')) return 'gcp';
+    if (lower.includes('aws') || lower.includes('amazon')) return 'aws';
+    return provider;
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -51,6 +59,7 @@ export const UploadPage = () => {
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile.name.endsWith('.csv')) {
         setFile(droppedFile);
+        setProvider(autoDetectProvider(droppedFile.name));
         resetStatuses();
       } else {
         setErrorMessage('Only CSV files are supported.');
@@ -60,7 +69,9 @@ export const UploadPage = () => {
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setProvider(autoDetectProvider(selectedFile.name));
       resetStatuses();
     }
   };

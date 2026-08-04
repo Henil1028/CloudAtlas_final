@@ -590,6 +590,9 @@
 /* ============================================================
    CONSOLE LAYOUT
    ============================================================ */
+/* ============================================================
+   CONSOLE LAYOUT & ULTRA-PREMIUM DESIGN SYSTEM
+   ============================================================ */
 .console-root {
   display: flex;
   min-height: 100vh;
@@ -602,16 +605,16 @@
   left: 16px; top: 16px; bottom: 16px;
   height: calc(100vh - 32px);
   width: 240px;
-  background: rgba(5, 7, 12, 0.45);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: rgba(18, 10, 38, 0.7);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
   z-index: 40;
   display: flex;
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.3s ease;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
 .console-topbar {
@@ -620,16 +623,16 @@
   left: 272px;
   right: 16px;
   height: 64px;
-  background: rgba(5, 7, 12, 0.45);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: rgba(18, 10, 38, 0.7);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
   z-index: 35;
   display: flex;
   align-items: center;
   padding: 0 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
 .console-workspace {
@@ -639,13 +642,13 @@
   padding-bottom: 24px;
   min-height: 100vh;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 @keyframes page-transition {
   from {
     opacity: 0;
-    transform: translateY(3px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -665,84 +668,72 @@
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 16px;
-  border-radius: 10px;
-  margin: 1px 8px;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  margin: 2px 10px;
   font-size: 13.5px;
   font-weight: 500;
-  color: #64748B;
+  color: #A78BFA;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   position: relative;
   font-family: 'Inter', sans-serif;
 }
 
 .sidebar-nav-item:hover {
-  color: #CBD5E1;
-  background: rgba(255, 255, 255, 0.04);
+  color: #F8FAFC;
+  background: rgba(168, 85, 247, 0.12);
+  transform: translateX(2px);
 }
 
 .sidebar-nav-item.active {
-  color: #F1F5F9;
-  background: rgba(6, 182, 212, 0.1);
-  border: 1px solid rgba(6, 182, 212, 0.15);
+  color: #FFFFFF;
+  font-weight: 600;
+  background: linear-gradient(90deg, rgba(147, 51, 234, 0.35), rgba(236, 72, 153, 0.15));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 0 4px 20px -2px rgba(147, 51, 234, 0.4);
 }
 
 .sidebar-nav-item.active::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: -2px;
+  top: 6px;
+  bottom: 6px;
   width: 4px;
-  border-radius: 4px 0 0 4px;
-  background: linear-gradient(180deg, #7C3AED, #06B6D4);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #A855F7, #EC4899);
+  box-shadow: 0 0 14px #A855F7;
 }
 
-/* KPI Card */
-.kpi-card {
-  background: rgba(10, 13, 22, 0.45);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+/* Ultra-Glass KPI & Chart Cards (Synthwave / Neurava Style) */
+.kpi-card, .glass-card, .chart-card {
+  background: rgba(18, 10, 38, 0.65);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
   padding: 24px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
 }
 
-.kpi-card::after {
+.kpi-card::after, .glass-card::after, .chart-card::after {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.45) 30%, rgba(139, 92, 246, 0.45) 70%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.5) 30%, rgba(236, 72, 153, 0.5) 70%, transparent);
 }
 
-.kpi-card:hover {
-  border-color: rgba(139, 92, 246, 0.25);
+.kpi-card:hover, .glass-card:hover, .chart-card:hover {
+  border-color: rgba(168, 85, 247, 0.35);
   transform: translateY(-2px);
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(34, 197, 94, 0.12), 0 0 50px rgba(139, 92, 246, 0.08);
-}
-
-/* Chart Card */
-.chart-card {
-  background: rgba(11, 16, 35, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.chart-card:hover {
-  border-color: rgba(124, 58, 237, 0.15);
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), 0 0 25px rgba(147, 51, 234, 0.15);
 }
 
 /* Responsive breakpoints */
@@ -1056,6 +1047,111 @@ html.light-mode ::-webkit-scrollbar-thumb {
 html.light-mode ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
+
+/* ==========================================
+   ULTRA-PREMIUM AI CHAT UI DESIGN SYSTEM
+   ========================================== */
+
+@keyframes pulse-orb {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.4), 0 0 80px rgba(6, 182, 212, 0.2);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 60px rgba(124, 58, 237, 0.6), 0 0 110px rgba(6, 182, 212, 0.4);
+  }
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.ai-orb-glow {
+  animation: pulse-orb 4s ease-in-out infinite;
+}
+
+.chat-prompt-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+}
+
+.chat-prompt-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.08);
+  box-shadow: 0 12px 30px -10px rgba(124, 58, 237, 0.3);
+}
+
+.markdown-chat-body {
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.markdown-chat-body h1,
+.markdown-chat-body h2,
+.markdown-chat-body h3 {
+  font-family: 'Outfit', sans-serif;
+  color: #F8FAFC;
+  margin-top: 14px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.markdown-chat-body h3 {
+  font-size: 15px;
+  color: #C084FC;
+}
+
+.markdown-chat-body ul,
+.markdown-chat-body ol {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.markdown-chat-body li {
+  margin-bottom: 6px;
+}
+
+.markdown-chat-body code {
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  color: #E9D5FF;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: 'Fira Code', monospace, monospace;
+  font-size: 12.5px;
+}
+
+.markdown-chat-body pre {
+  background: rgba(8, 14, 28, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.markdown-chat-body pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #38BDF8;
+}
+
+.chat-input-focus-wrapper {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-input-focus-wrapper:focus-within {
+  border-color: rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 25px rgba(124, 58, 237, 0.2), 0 0 50px rgba(6, 182, 212, 0.1);
+}
+
 
 
 
