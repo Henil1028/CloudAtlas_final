@@ -45,19 +45,24 @@ export const UploadPage = () => {
     }
   };
 
+  const applyProvider = (detected) => {
+    setProvider(detected);
+    localStorage.setItem('csv-detected-provider', detected);
+  };
+
   const autoDetectProvider = (fileObj) => {
     if (!fileObj) return;
 
     // 1. Filename auto-detection
     const fileName = (fileObj.name || '').toLowerCase();
     if (fileName.includes('azure') || fileName.includes('microsoft')) {
-      setProvider('azure');
+      applyProvider('azure');
       return;
     } else if (fileName.includes('gcp') || fileName.includes('google')) {
-      setProvider('gcp');
+      applyProvider('gcp');
       return;
     } else if (fileName.includes('aws') || fileName.includes('amazon')) {
-      setProvider('aws');
+      applyProvider('aws');
       return;
     }
 
@@ -66,11 +71,11 @@ export const UploadPage = () => {
     reader.onload = (e) => {
       const text = (e.target?.result || '').toLowerCase();
       if (text.includes('resourcegroup') || text.includes('metercategory') || text.includes('subscriptionid') || text.includes('azure') || text.includes('microsoft') || text.includes('virtualmachines')) {
-        setProvider('azure');
+        applyProvider('azure');
       } else if (text.includes('project_id') || text.includes('service_description') || text.includes('sku_description') || text.includes('gcp') || text.includes('google') || text.includes('bigquery')) {
-        setProvider('gcp');
+        applyProvider('gcp');
       } else if (text.includes('lineitem') || text.includes('unblendedcost') || text.includes('productcode') || text.includes('aws') || text.includes('amazon') || text.includes('ec2') || text.includes('s3')) {
-        setProvider('aws');
+        applyProvider('aws');
       }
     };
     reader.readAsText(fileObj);
@@ -149,11 +154,17 @@ export const UploadPage = () => {
       setProgress(100);
       setSuccess(true);
       setInsertedCount(response.data.recordsInserted);
-      localStorage.setItem('cloudatlas_active_provider', provider);
+
+      // Use the provider detected by server (reads actual CSV 'provider' column)
+      const serverProvider = (response.data.file?.provider || provider).toLowerCase();
+      localStorage.setItem('cloudatlas_active_provider', serverProvider);
+      localStorage.setItem('csv-detected-provider', serverProvider);
+      applyProvider(serverProvider);
+
       setFile(null);
 
       const newFileId = response.data.file?._id;
-      notifyUpload(newFileId);
+      notifyUpload(newFileId, serverProvider);
 
       setTimeout(() => {
         navigate('/predictions');

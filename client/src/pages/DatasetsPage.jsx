@@ -90,9 +90,11 @@ export const DatasetsPage = () => {
 
   const handleRunDataset = (ds) => {
     setRunningId(ds.id);
-    const provKey = (ds.provider || 'aws').toLowerCase();
+    // Use raw provider from the file record (always lowercase: aws/azure/gcp)
+    const provKey = (ds.raw?.provider || ds.provider || 'aws').toLowerCase();
     try {
       localStorage.setItem('cloudatlas_active_provider', provKey);
+      localStorage.setItem('csv-detected-provider', provKey);
     } catch (e) {}
     notifyUpload(ds.id, provKey);
     setTimeout(() => {

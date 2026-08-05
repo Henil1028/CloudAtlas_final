@@ -56,34 +56,40 @@ const validateBillingCSV = (filePath, defaultProvider = 'aws', originalName = ''
         const regionVal = normalizedRow['region'] || normalizedRow['location'] || normalizedRow['zone'] || 'us-east-1';
         const usageTypeVal = normalizedRow['usagetype'] || normalizedRow['type'] || normalizedRow['usage'] || 'StandardUsage';
 
-        // Auto-detect provider based on filename and row contents/headers
-        let detectedProvider = defaultProvider;
-        const fnameStr = String(originalName || filePath || '').toLowerCase();
-        if (fnameStr.includes('azure')) detectedProvider = 'azure';
-        else if (fnameStr.includes('gcp') || fnameStr.includes('google')) detectedProvider = 'gcp';
-        else if (fnameStr.includes('aws') || fnameStr.includes('amazon')) detectedProvider = 'aws';
+        // --- Provider resolution: CSV column wins, then keyword scan, then filename ---
+        // Normalize common provider name variants from CSV column
+        const rawProviderCol = (normalizedRow['provider'] || normalizedRow['cloud'] || normalizedRow['platform'] || '').trim().toLowerCase();
+        let resolvedProvider = '';
 
-        const rowStr = JSON.stringify(normalizedRow).toLowerCase();
-        if (rowStr.includes('azure') || rowStr.includes('meter') || rowStr.includes('subscription') || rowStr.includes('resourcegroup') || rowStr.includes('virtual machines') || rowStr.includes('blob') || rowStr.includes('microsoft')) {
-          detectedProvider = 'azure';
-        } else if (rowStr.includes('gcp') || rowStr.includes('google') || rowStr.includes('bigquery') || rowStr.includes('compute engine') || rowStr.includes('cloud storage')) {
-          detectedProvider = 'gcp';
-        } else if (!fnameStr.includes('azure') && !fnameStr.includes('gcp') && (rowStr.includes('aws') || rowStr.includes('ec2') || rowStr.includes('s3') || rowStr.includes('unblendedcost') || rowStr.includes('amazon'))) {
-          detectedProvider = 'aws';
+        if (rawProviderCol.includes('azure') || rawProviderCol.includes('microsoft')) {
+          resolvedProvider = 'azure';
+        } else if (rawProviderCol.includes('gcp') || rawProviderCol.includes('google')) {
+          resolvedProvider = 'gcp';
+        } else if (rawProviderCol.includes('aws') || rawProviderCol.includes('amazon')) {
+          resolvedProvider = 'aws';
+        } else if (['aws', 'azure', 'gcp'].includes(rawProviderCol)) {
+          resolvedProvider = rawProviderCol;
         }
 
-        const providerVal = normalizedRow['provider'] || normalizedRow['cloud'] || normalizedRow['platform'] || detectedProvider;
-
-        // Validate essential fields presence
-        if (!dateVal || !costVal) {
-          errors.push(`Row ${lineCount}: Missing Date or Cost value.`);
-          return;
+        // If CSV column had no recognized provider, fall back to keyword scan on row content
+        if (!resolvedProvider) {
+          const rowStr = JSON.stringify(normalizedRow).toLowerCase();
+          if (rowStr.includes('azure') || rowStr.includes('meter') || rowStr.includes('subscription') || rowStr.includes('resourcegroup') || rowStr.includes('virtual machines') || rowStr.includes('blob') || rowStr.includes('microsoft')) {
+            resolvedProvider = 'azure';
+          } else if (rowStr.includes('gcp') || rowStr.includes('google') || rowStr.includes('bigquery') || rowStr.includes('compute engine') || rowStr.includes('cloud storage')) {
+            resolvedProvider = 'gcp';
+          } else if (rowStr.includes('aws') || rowStr.includes('ec2') || rowStr.includes('s3') || rowStr.includes('unblendedcost') || rowStr.includes('amazon')) {
+            resolvedProvider = 'aws';
+          } else {
+            // Final fallback: use the defaultProvider passed from billingController (filename-based)
+            resolvedProvider = defaultProvider;
+          }
         }
 
-        // Validate provider - Strictly allow only aws, azure, or gcp
-        let provider = (providerVal || defaultProvider).trim().toLowerCase();
+        // Validate provider is one of the 3 known providers
+        let provider = resolvedProvider;
         if (!['aws', 'azure', 'gcp'].includes(provider)) {
-          errors.push(`Row ${lineCount}: Invalid cloud provider "${provider}". Only AWS, Azure, and GCP billing files are supported.`);
+          errors.push(`Row ${lineCount}: Invalid cloud provider "${rawProviderCol || provider}". Only AWS, Azure, and GCP billing files are supported.`);
           return;
         }
 

@@ -1,18 +1,19 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 /**
- * DataContext — Global signal bus for CSV upload events.
+ * DataContext — Global signal bus for CSV upload/dataset-switch events.
  *
  * Usage:
- *   const { lastUploadTime, notifyUpload } = useDataContext();
+ *   const { lastUploadTime, notifyUpload, activeProvider } = useDataContext();
  *
- * When a CSV is uploaded successfully, call `notifyUpload()`.
- * Any page that includes `lastUploadTime` in its useEffect dependency array
- * will automatically re-fetch its data.
+ * When a CSV is uploaded or a dataset is activated, call `notifyUpload(fileId, provider)`.
+ * Any page that includes `lastUploadTime` or `activeProvider` in its dependency array
+ * will automatically re-sync.
  */
 const DataContext = createContext({
   lastUploadTime: null,
   lastUploadFileId: null,
+  activeProvider: 'aws',
   notifyUpload: () => {},
 });
 
@@ -26,8 +27,21 @@ export const DataContextProvider = ({ children }) => {
     }
   });
 
-  const notifyUpload = useCallback((fileId = null) => {
+  const [activeProvider, setActiveProvider] = useState(() => {
+    try {
+      return (
+        localStorage.getItem('csv-detected-provider') ||
+        localStorage.getItem('cloudatlas_active_provider') ||
+        'aws'
+      ).toLowerCase();
+    } catch (e) {
+      return 'aws';
+    }
+  });
+
+  const notifyUpload = useCallback((fileId = null, provider = null) => {
     setLastUploadTime(Date.now());
+
     if (fileId) {
       setLastUploadFileId(fileId);
       try {
@@ -39,10 +53,19 @@ export const DataContextProvider = ({ children }) => {
         localStorage.removeItem('cloudatlas_active_file_id');
       } catch (e) {}
     }
+
+    if (provider) {
+      const p = provider.toLowerCase();
+      setActiveProvider(p);
+      try {
+        localStorage.setItem('csv-detected-provider', p);
+        localStorage.setItem('cloudatlas_active_provider', p);
+      } catch (e) {}
+    }
   }, []);
 
   return (
-    <DataContext.Provider value={{ lastUploadTime, lastUploadFileId, notifyUpload }}>
+    <DataContext.Provider value={{ lastUploadTime, lastUploadFileId, activeProvider, notifyUpload }}>
       {children}
     </DataContext.Provider>
   );

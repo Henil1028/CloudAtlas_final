@@ -17,14 +17,17 @@ const uploadCSV = async (req, res) => {
     let { provider } = req.body;
     const lowerName = req.file.originalname.toLowerCase();
     
-    // Auto-detect provider if missing or filename explicitly mentions a provider
-    if (lowerName.includes('azure')) {
+    // Override with filename hint only if filename explicitly names a provider
+    if (lowerName.includes('azure') || lowerName.includes('microsoft')) {
       provider = 'azure';
     } else if (lowerName.includes('gcp') || lowerName.includes('google')) {
       provider = 'gcp';
     } else if (lowerName.includes('aws') || lowerName.includes('amazon')) {
       provider = 'aws';
-    } else if (!provider || !['aws', 'azure', 'gcp'].includes(provider.toLowerCase())) {
+    }
+    // If provider still not set or invalid, default to 'aws' as last resort
+    // (will be overridden by actual CSV row data below)
+    if (!provider || !['aws', 'azure', 'gcp'].includes((provider || '').toLowerCase())) {
       provider = 'aws';
     }
 
@@ -61,14 +64,20 @@ const uploadCSV = async (req, res) => {
     }
 
     const records = validation.records.map((r) => {
-      let recProv = (r.provider || detectedProv).toLowerCase();
-      const strRec = JSON.stringify(r).toLowerCase();
-      if (strRec.includes('azure') || strRec.includes('microsoft') || strRec.includes('virtualmachines') || strRec.includes('blob')) {
-        recProv = 'azure';
-      } else if (strRec.includes('gcp') || strRec.includes('google') || strRec.includes('bigquery') || strRec.includes('compute')) {
-        recProv = 'gcp';
-      } else if (strRec.includes('aws') || strRec.includes('amazon') || strRec.includes('ec2') || strRec.includes('s3')) {
-        recProv = 'aws';
+      // Use the 'provider' column from CSV row directly if it's a known provider
+      const csvProv = (r.provider || '').toLowerCase().trim();
+      let recProv = ['aws', 'azure', 'gcp'].includes(csvProv) ? csvProv : detectedProv;
+
+      // Fallback: scan row content for provider keywords
+      if (!['aws', 'azure', 'gcp'].includes(recProv)) {
+        const strRec = JSON.stringify(r).toLowerCase();
+        if (strRec.includes('azure') || strRec.includes('microsoft') || strRec.includes('virtualmachines') || strRec.includes('blob')) {
+          recProv = 'azure';
+        } else if (strRec.includes('gcp') || strRec.includes('google') || strRec.includes('bigquery') || strRec.includes('compute')) {
+          recProv = 'gcp';
+        } else if (strRec.includes('aws') || strRec.includes('amazon') || strRec.includes('ec2') || strRec.includes('s3')) {
+          recProv = 'aws';
+        }
       }
 
       return {
@@ -82,8 +91,12 @@ const uploadCSV = async (req, res) => {
     // Store records in Database (or in-memory mock via Proxy insertMany)
     const savedRecords = await BillingData.insertMany(records);
 
-    // Determine primary provider from saved records
-    const detectedPrimaryProvider = savedRecords[0]?.provider || detectedProv;
+    // Determine primary provider by counting occurrences across ALL records (most frequent wins)
+    const providerCounts = {};
+    savedRecords.forEach(r => {
+      if (r.provider) providerCounts[r.provider] = (providerCounts[r.provider] || 0) + 1;
+    });
+    const detectedPrimaryProvider = Object.entries(providerCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || detectedProv;
 
     // Save File Upload history log
     const uploadedFile = await UploadedFile.create({
@@ -372,8 +385,9 @@ const getSummary = async (req, res) => {
       totalCost += cost;
 
       // Provider
-      if (r.provider && providerMap[r.provider] !== undefined) {
-        providerMap[r.provider] += cost;
+      const pKey = (r.provider || '').toLowerCase();
+      if (pKey && providerMap[pKey] !== undefined) {
+        providerMap[pKey] += cost;
       }
 
       // Service

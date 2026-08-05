@@ -146,13 +146,17 @@ const ServiceTooltip = ({ active, payload, label }) => {
 
 // ─── Predictions Page ────────────────────────────────────────────────────────
 export const PredictionsPage = () => {
-  const [form, setForm] = useState({
-    provider: 'aws', region: 'us-east-1', budget: 200000,
+  // ⚠️ DataContext MUST be first — activeProvider used in form lazy init below
+  const { lastUploadTime, lastUploadFileId, activeProvider } = useDataContext();
+
+  const [form, setForm] = useState(() => ({
+    provider: activeProvider || 'aws',
+    region: 'us-east-1', budget: 200000,
     service: 'all', resource_type: 't2.medium',
     cpu_utilization: 45, memory_utilization: 55,
     storage_gb: 120, network_gb: 15,
     environment: 'production', payment_type: 'on_demand', status: 'active',
-  });
+  }));
   const [loading, setLoading] = useState(false);
   const [activeRange, setActiveRange] = useState('30d');
   const [maximizedChart, setMaximizedChart] = useState(null);
@@ -171,7 +175,13 @@ export const PredictionsPage = () => {
   const [dataSummary, setDataSummary] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const isInitialLoad = React.useRef(true);
-  const { lastUploadTime, lastUploadFileId } = useDataContext();
+
+  // Instantly sync provider when dataset is switched from DatasetsPage
+  React.useEffect(() => {
+    if (activeProvider) {
+      setForm(prev => ({ ...prev, provider: activeProvider.toLowerCase() }));
+    }
+  }, [activeProvider]);
 
   React.useEffect(() => {
     const fileQuery = lastUploadFileId ? `?fileId=${lastUploadFileId}` : '';
@@ -190,6 +200,21 @@ export const PredictionsPage = () => {
       const daily = (trendData.dailySpend || []).sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setDataSummary(summary);
+
+      // Auto-set provider from backend dataset summary if available
+      let detectedProv = null;
+      if (summary?.providerSpend) {
+        const top = Object.entries(summary.providerSpend)
+          .filter(([_, cost]) => cost > 0)
+          .sort((a, b) => b[1] - a[1])[0];
+        if (top) detectedProv = top[0].toLowerCase();
+      }
+      if (!detectedProv && activeProvider) {
+        detectedProv = activeProvider.toLowerCase();
+      }
+      if (detectedProv) {
+        setForm(prev => ({ ...prev, provider: detectedProv }));
+      }
 
       if (daily.length > 0) {
         // 1. Format historical anomaly data with unified statistical anomaly detection
@@ -945,8 +970,8 @@ export const PredictionsPage = () => {
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
             <div>
-              <h1 style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'Outfit', color: '#F1F5F9', margin: 0, letterSpacing: '-0.02em' }}>
-                AWS Total Cost Dashboard
+              <h1 style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'Outfit', color: '#F1F5F9', margin: 0, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                {form.provider} Total Cost Dashboard
               </h1>
               <p style={{ fontSize: '11px', color: '#475569', margin: '4px 0 0', fontFamily: 'Inter' }}>
                 XGBoost Regressor · Historical data + ML Forecast overlay
@@ -1362,7 +1387,7 @@ export const PredictionsPage = () => {
               </div>
 
               <h2 style={{ fontSize: '18px', fontWeight: 800, fontFamily: 'Outfit', color: '#fff', marginBottom: '4px' }}>
-                {maximizedChart === 'anomaly' ? 'Anomaly Detection' : 'Cost by AWS Services'} — Zoom View
+                {maximizedChart === 'anomaly' ? 'Anomaly Detection' : `Cost by ${form.provider.toUpperCase()} Services`} — Zoom View
               </h2>
               <p style={{ fontSize: '11.5px', color: '#475569', marginBottom: '20px' }}>
                 {showFuture ? '🟣 Solid = historical data  |  🟡 Dashed/Transparent = ML forecast  |  🔴 Dots = anomaly/spike events' : 'Showing historical data only. Toggle "Show Forecast" to see future projections.'}
