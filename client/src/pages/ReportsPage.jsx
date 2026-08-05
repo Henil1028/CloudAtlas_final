@@ -296,11 +296,10 @@ export const ReportsPage = () => {
 
   const [dataSummary, setDataSummary] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
-  const { lastUploadTime, lastUploadFileId } = useDataContext();
+  const { lastUploadTime } = useDataContext();
 
   useEffect(() => {
-    const fileQuery = lastUploadFileId ? `?fileId=${lastUploadFileId}` : '';
-    api.get(`/billing/summary${fileQuery}`)
+    api.get('/billing/summary')
       .then(res => {
         setDataSummary(res.data);
         setDataLoading(false);
@@ -309,48 +308,30 @@ export const ReportsPage = () => {
         console.error(err);
         setDataLoading(false);
       });
-  }, [lastUploadTime, lastUploadFileId]);
+  }, [lastUploadTime]);
+
+
 
   // ── Aggregate all views dynamically from live database dataset summary ──
   const dynamicRawData = useMemo(() => {
     if (!dataSummary || !dataSummary.dailySpend || dataSummary.dailySpend.length === 0) {
       return RAW_DATA;
     }
+    const spend = dataSummary.providerSpend || {};
+    const total = Object.values(spend).reduce((s, v) => s + (v || 0), 0) || 1;
 
-    let awsCost = 0, azureCost = 0, gcpCost = 0;
-    const spend = dataSummary.providerSpend;
-    if (spend) {
-      if (Array.isArray(spend)) {
-        spend.forEach(p => {
-          const name = p.provider?.toLowerCase();
-          if (name === 'aws') awsCost += p.cost;
-          else if (name === 'azure') azureCost += p.cost;
-          else if (name === 'gcp') gcpCost += p.cost;
-        });
-      } else if (typeof spend === 'object') {
-        awsCost = spend.aws || 0;
-        azureCost = spend.azure || 0;
-        gcpCost = spend.gcp || 0;
+    // Build ratios for each detected provider
+    const providerRatios = {};
+    Object.entries(spend).forEach(([key, val]) => {
+      if (val > 0) {
+        providerRatios[key.toUpperCase()] = val / total;
       }
+    });
+
+    // If no provider data, fallback
+    if (Object.keys(providerRatios).length === 0) {
+      return RAW_DATA;
     }
-
-    const totalSpend = awsCost + azureCost + gcpCost;
-    if (totalSpend === 0) {
-      let primaryProv = 'aws';
-      const topS = (dataSummary.topServices || []).map(s => s.service.toLowerCase()).join(' ');
-      if (topS.includes('gcp') || topS.includes('bigquery') || topS.includes('compute engine')) primaryProv = 'gcp';
-      else if (topS.includes('azure') || topS.includes('virtual machines') || topS.includes('blob')) primaryProv = 'azure';
-      else primaryProv = 'aws';
-
-      if (primaryProv === 'gcp') gcpCost = dataSummary.totalCost || 1;
-      else if (primaryProv === 'azure') azureCost = dataSummary.totalCost || 1;
-      else awsCost = dataSummary.totalCost || 1;
-    }
-
-    const total = (awsCost + azureCost + gcpCost) || 1;
-    const awsRatio = awsCost / total;
-    const azureRatio = azureCost / total;
-    const gcpRatio = gcpCost / total;
 
     const list = [];
     dataSummary.dailySpend.forEach(d => {
@@ -358,9 +339,9 @@ export const ReportsPage = () => {
       const y = dt.getFullYear();
       const m = String(dt.getMonth() + 1).padStart(2, '0');
       const monthKey = `${y}-${m}`;
-      if (awsRatio > 0) list.push({ date: monthKey, provider: 'AWS', cost: d.cost * awsRatio });
-      if (azureRatio > 0) list.push({ date: monthKey, provider: 'Azure', cost: d.cost * azureRatio });
-      if (gcpRatio > 0) list.push({ date: monthKey, provider: 'GCP', cost: d.cost * gcpRatio });
+      Object.entries(providerRatios).forEach(([provider, ratio]) => {
+        list.push({ date: monthKey, provider, cost: d.cost * ratio });
+      });
     });
     return list.length > 0 ? list : RAW_DATA;
   }, [dataSummary]);

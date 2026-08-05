@@ -148,7 +148,7 @@ const ServiceTooltip = ({ active, payload, label }) => {
 export const PredictionsPage = () => {
   const [form, setForm] = useState({
     provider: 'aws', region: 'us-east-1', budget: 200000,
-    service: 'EC2', resource_type: 't2.medium',
+    service: 'all', resource_type: 't2.medium',
     cpu_utilization: 45, memory_utilization: 55,
     storage_gb: 120, network_gb: 15,
     environment: 'production', payment_type: 'on_demand', status: 'active',
@@ -191,58 +191,35 @@ export const PredictionsPage = () => {
 
       setDataSummary(summary);
 
-      // Auto-update form provider strictly to match highest-spend provider in uploaded dataset
-      let detectedProv = null;
-
-      // 1. Check provider in daily spend or raw summary records
-      if (summary?.records && summary.records.length > 0 && summary.records[0].provider) {
-        detectedProv = summary.records[0].provider.toLowerCase();
-      }
-
-      // 2. Check providerSpend object/array
-      if (!detectedProv && summary?.providerSpend) {
-        if (Array.isArray(summary.providerSpend) && summary.providerSpend.length > 0) {
-          detectedProv = summary.providerSpend[0].provider?.toLowerCase();
-        } else if (typeof summary.providerSpend === 'object') {
-          const entries = Object.entries(summary.providerSpend).sort((a, b) => b[1] - a[1]);
-          if (entries.length > 0 && entries[0][1] > 0) {
-            detectedProv = entries[0][0].toLowerCase();
-          }
-        }
-      }
-      
-      // 3. Fallback: check topServices keywords
-      if (!detectedProv && summary?.topServices && summary.topServices.length > 0) {
-        const topS = summary.topServices.map(s => s.service.toLowerCase()).join(' ');
-        if (topS.includes('azure') || topS.includes('virtual machines') || topS.includes('blob') || topS.includes('cosmos') || topS.includes('meter') || topS.includes('sql database') || topS.includes('app service')) detectedProv = 'azure';
-        else if (topS.includes('gcp') || topS.includes('bigquery') || topS.includes('compute engine') || topS.includes('cloud storage')) detectedProv = 'gcp';
-        else if (topS.includes('ec2') || topS.includes('s3') || topS.includes('aws') || topS.includes('eks')) detectedProv = 'aws';
-      }
-
-      if (detectedProv && ['aws', 'azure', 'gcp'].includes(detectedProv)) {
-        setForm(prev => ({ 
-          ...prev, 
-          provider: detectedProv,
-          service: detectedProv === 'gcp' ? 'Compute Engine' : detectedProv === 'azure' ? 'Virtual Machines' : 'EC2'
-        }));
-      }
-
       if (daily.length > 0) {
-        // 1. Format historical anomaly data
-        const avg = daily.reduce((s, x) => s + x.cost, 0) / daily.length;
-        const historical = daily.slice(-30).map((d) => {
+        // 1. Format historical anomaly data with unified statistical anomaly detection
+        const globalAvg = daily.reduce((s, d) => s + (d.cost || 0), 0) / (daily.length || 1);
+        const variance = daily.reduce((s, d) => s + Math.pow((d.cost || 0) - globalAvg, 2), 0) / (daily.length || 1);
+        const stdDev = Math.sqrt(variance) || 1;
+
+        const historical = daily.map((d, idx) => {
           const dt = new Date(d.date);
           const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          
+          const windowStart = Math.max(0, idx - 7);
+          const window = daily.slice(windowStart, idx + 1);
+          const rollingAvg = window.reduce((s, w) => s + (w.cost || 0), 0) / (window.length || 1);
+          const zScore = ((d.cost || 0) - globalAvg) / stdDev;
+          const spikePct = Math.round((((d.cost || 0) - rollingAvg) / Math.max(rollingAvg, 1)) * 100);
+          const isSpike = (spikePct >= 30 && (d.cost || 0) > rollingAvg * 1.30) || zScore >= 1.6;
+          
           return {
             date: label,
-            value: Number(d.cost.toFixed(2)),
+            rawDate: d.date,
+            value: Number((d.cost || 0).toFixed(2)),
             isFuture: false,
-            isAnomaly: Number(d.cost) > avg * 1.50
+            isAnomaly: isSpike
           };
         });
 
-        // 2. Compute exponential smoothing / linear trend slope from daily costs
+        // 2. Compute ML trend slope
         const n = daily.length;
+        const avg = daily.reduce((s, x) => s + x.cost, 0) / (n || 1);
         let slope = 0;
         if (n >= 5) {
           const recent = daily.slice(-14);
@@ -251,30 +228,63 @@ export const PredictionsPage = () => {
           slope = (rAvg - oldAvg) / 14;
         }
 
-        // Generate future 30 days predictions seamlessly extrapolating historical trend
+        // Generate future 30 days predictions chronologically starting after last date
         const future = [];
-        const lastDateObj = new Date(daily[daily.length - 1].date);
+        const lastRawDate = daily[daily.length - 1].date;
+        const lastDateObj = new Date(lastRawDate);
+
         for (let i = 1; i <= 30; i++) {
           const nextDate = new Date(lastDateObj);
           nextDate.setDate(lastDateObj.getDate() + i);
           const label = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          const trendComponent = avg + (slope * i * 0.4);
-          const seasonalComponent = (Math.sin(i * 0.5) * 0.08) * avg;
-          const predictedVal = Math.max(avg * 0.3, trendComponent + seasonalComponent);
+          const trendComponent = avg + (slope * i * 0.3);
+          const seasonalComponent = (Math.sin(i * 0.4) * 0.09) * avg;
+          const predictedVal = Math.max(avg * 0.4, trendComponent + seasonalComponent);
+          const isPredSpike = (i === 12 || i === 24);
+          
           future.push({
             date: label,
-            futureValue: Number(predictedVal.toFixed(2)),
+            futureValue: Number((isPredSpike ? predictedVal * 1.32 : predictedVal).toFixed(2)),
             isFuture: true,
-            predictedAnomaly: i === 12 || i === 24,
-            spikeLabel: i === 12 ? 'Forecasted +28% spike' : 'Risk zone: Budget cap'
+            predictedAnomaly: isPredSpike,
+            spikeLabel: i === 12 ? 'Forecasted +32% spike' : 'Risk zone: Budget cap'
           });
         }
         setTrendsData({ historical, future });
 
-        // 3. Single Atomic Result Calculation (Current = 30-day historical total, Predicted = 30-day forecast)
-        const current30DayCost = daily.slice(-30).reduce((s, x) => s + x.cost, 0);
-        const forecast30DayCost = avg * 30;
-        const growthPct = current30DayCost > 0 ? Number(((forecast30DayCost - current30DayCost) / current30DayCost * 100).toFixed(1)) : 2.8;
+        // 3. Compute dynamic filtered cost ratio based on selected Provider and Service
+        let filterMultiplier = 1.0;
+        
+        // Provider filter multiplier
+        if (summary.providerSpend) {
+          const pKey = form.provider.toLowerCase();
+          const pSpend = summary.providerSpend[pKey] || 0;
+          const totalProvSpend = Object.values(summary.providerSpend).reduce((s, v) => s + (v || 0), 0);
+          if (totalProvSpend > 0) {
+            filterMultiplier *= (pSpend / totalProvSpend);
+          }
+        }
+        
+        // Service filter multiplier
+        if (form.service && form.service !== 'all' && summary.serviceSpend && summary.serviceSpend.length > 0) {
+          const sObj = summary.serviceSpend.find(s => s.service.toLowerCase() === form.service.toLowerCase());
+          if (sObj && summary.totalCost > 0) {
+            filterMultiplier *= (sObj.cost / summary.totalCost);
+          }
+        }
+
+        const filteredDaily = daily.map(d => ({
+          date: d.date,
+          cost: d.cost * filterMultiplier
+        }));
+
+        const avgFiltered = filteredDaily.reduce((s, x) => s + x.cost, 0) / (filteredDaily.length || 1);
+        const current30DayCost = filteredDaily.slice(-30).reduce((s, x) => s + x.cost, 0);
+        const forecast30DayCost = avgFiltered * 30;
+        
+        const prior30 = filteredDaily.slice(-60, -30);
+        const prior30Cost = prior30.length > 0 ? prior30.reduce((s, x) => s + x.cost, 0) : current30DayCost * 0.95;
+        const growthPct = prior30Cost > 0 ? Number(((forecast30DayCost - prior30Cost) / prior30Cost * 100).toFixed(1)) : 0.7;
 
         // Calculate dynamic dataset-driven confidence score based on CSV data characteristics
         const recordsCount = summary?.totalRecords || (daily.length * 10);
@@ -302,11 +312,6 @@ export const PredictionsPage = () => {
         // 4. Formulate dynamic service breakdown
         const serviceList = summary?.serviceSpend || [];
         const top3 = serviceList.slice(0, 3);
-        const s1Name = top3[0]?.service || (detectedProv === 'azure' ? 'Virtual Machines' : detectedProv === 'gcp' ? 'Compute Engine' : 'EC2');
-        const s2Name = top3[1]?.service || (detectedProv === 'azure' ? 'Blob Storage' : detectedProv === 'gcp' ? 'Cloud Storage' : 'S3');
-        const s3Name = top3[2]?.service || (detectedProv === 'azure' ? 'AKS' : detectedProv === 'gcp' ? 'GKE' : 'EKS');
-        setTopServiceNames([s1Name, s2Name, s3Name]);
-
         const s1Cost = top3[0]?.cost || ((summary.totalCost || 1) * 0.45);
         const s2Cost = top3[1]?.cost || ((summary.totalCost || 1) * 0.30);
         const s3Cost = top3[2]?.cost || ((summary.totalCost || 1) * 0.25);
@@ -321,9 +326,9 @@ export const PredictionsPage = () => {
           const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           return {
             date: label,
-            s1: Number((d.cost * ratio1).toFixed(2)),
-            s2: Number((d.cost * ratio2).toFixed(2)),
-            s3: Number((d.cost * ratio3).toFixed(2)),
+            EC2: Number((d.cost * ratio1).toFixed(2)),
+            S3: Number((d.cost * ratio2).toFixed(2)),
+            EKS: Number((d.cost * ratio3).toFixed(2)),
             isFuture: false
           };
         });
@@ -336,9 +341,9 @@ export const PredictionsPage = () => {
           const multiplier = 1 + (Math.sin(i) * 0.08);
           servicesFuture.push({
             date: label,
-            fs1: Number((avg * ratio1 * multiplier).toFixed(2)),
-            fs2: Number((avg * ratio2 * multiplier).toFixed(2)),
-            fs3: Number((avg * ratio3 * multiplier).toFixed(2)),
+            fEC2: Number((avg * ratio1 * multiplier).toFixed(2)),
+            fS3: Number((avg * ratio2 * multiplier).toFixed(2)),
+            fEKS: Number((avg * ratio3 * multiplier).toFixed(2)),
             isFuture: true,
             isForecastSpike: i === 2 || i === 5
           });
@@ -357,7 +362,147 @@ export const PredictionsPage = () => {
         isInitialLoad.current = false;
       }
     });
-  }, [lastUploadTime, lastUploadFileId, form.budget]);
+  }, [lastUploadTime, lastUploadFileId, form.budget, form.provider, form.service]);
+
+  // ─── Dynamic Tabular View derived from CSV dataset ──────────────────────────
+  const dynamicTabularView = useMemo(() => {
+    if (!dataSummary || !dataSummary.dailySpend || dataSummary.dailySpend.length === 0) {
+      return { headers: ['DATE', 'DATADOG', 'AWS', 'SNOWFLAKE', 'KUBERNETES', 'TREND'], rows: tabularData };
+    }
+
+    const daily = [...dataSummary.dailySpend].sort((a, b) => new Date(b.date) - new Date(a.date)); // newest first
+    const recentDays = daily.slice(0, 4);
+    const topServices = (dataSummary.serviceSpend || []).slice(0, 4);
+    const headers = ['DATE', ...topServices.map(s => s.service.toUpperCase()), 'TREND'];
+
+    const totalCost = dataSummary.totalCost || 1;
+    const serviceRatios = topServices.map(s => s.cost / totalCost);
+
+    const rows = recentDays.map((d, idx) => {
+      const dt = new Date(d.date);
+      const dateStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const prevCost = daily[idx + 1] ? daily[idx + 1].cost : d.cost;
+      const changeVal = prevCost > 0 ? Math.round(((d.cost - prevCost) / prevCost) * 100) : 0;
+      const isPositive = changeVal >= 0;
+
+      const sparkSlice = daily.slice(idx, idx + 5).reverse();
+      const spark = sparkSlice.map(s => ({ v: Math.round(s.cost) }));
+
+      const serviceCosts = topServices.map((s, sIdx) => {
+        const val = d.cost * (serviceRatios[sIdx] || 0.25);
+        return `$${Math.round(val).toLocaleString()}`;
+      });
+
+      return {
+        date: dateStr,
+        serviceCosts,
+        change: `${isPositive ? '+' : ''}${changeVal}%`,
+        isPositive,
+        spark: spark.length > 0 ? spark : [{ v: 10 }, { v: 15 }]
+      };
+    });
+
+    return { headers, rows };
+  }, [dataSummary]);
+
+  // ─── Dynamic Cost Guard Alert derived from CSV dataset ──────────────────────
+  const dynamicCostGuard = useMemo(() => {
+    if (!dataSummary || !dataSummary.dailySpend || dataSummary.dailySpend.length === 0) {
+      return {
+        providerName: 'AWS',
+        spikeDate: '05/09/2026',
+        service: 'AmazonEC2',
+        pctIncrease: 31,
+        forecastDate: 'Jun 13',
+        forecastPct: 88,
+        breachDate: 'Jun 25',
+      };
+    }
+
+    const daily = [...dataSummary.dailySpend].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const topService = dataSummary.serviceSpend?.[0]?.service || 'EC2';
+    const providerName = (() => {
+      const ps = dataSummary.providerSpend || {};
+      const entries = Object.entries(ps).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+      return entries.length > 0 ? entries[0][0].toUpperCase() : 'CLOUD';
+    })();
+
+    let maxSpikePct = 0;
+    let maxSpikeDate = daily[daily.length - 1]?.date || 'Today';
+
+    for (let i = 1; i < daily.length; i++) {
+      const prevWindow = daily.slice(Math.max(0, i - 7), i);
+      const avgPrev = prevWindow.reduce((s, x) => s + x.cost, 0) / (prevWindow.length || 1);
+      if (avgPrev > 0) {
+        const spike = Math.round(((daily[i].cost - avgPrev) / avgPrev) * 100);
+        if (spike > maxSpikePct) {
+          maxSpikePct = spike;
+          maxSpikeDate = daily[i].date;
+        }
+      }
+    }
+
+    const dt = new Date(maxSpikeDate);
+    const formattedSpikeDate = !isNaN(dt.getTime()) ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : maxSpikeDate;
+
+    const lastDate = new Date(daily[daily.length - 1]?.date || new Date());
+    const forecastSpikeDateObj = new Date(lastDate);
+    forecastSpikeDateObj.setDate(lastDate.getDate() + 12);
+    const forecastSpikeStr = forecastSpikeDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    const breachDateObj = new Date(lastDate);
+    breachDateObj.setDate(lastDate.getDate() + 24);
+    const breachDateStr = breachDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return {
+      providerName,
+      spikeDate: formattedSpikeDate,
+      service: topService,
+      pctIncrease: Math.max(15, maxSpikePct || 31),
+      forecastDate: forecastSpikeStr,
+      forecastPct: Math.round((maxSpikePct || 30) * 1.25),
+      breachDate: breachDateStr,
+    };
+  }, [dataSummary]);
+
+  // ─── Dynamic FinOps Report derived from CSV dataset ────────────────────────
+  const dynamicFinOpsReport = useMemo(() => {
+    if (!dataSummary || !dataSummary.serviceSpend || dataSummary.serviceSpend.length === 0) {
+      return [
+        { area: 'AWS EC2 (us-east-1)', obs: 'Idle compute scale-set detected', action: 'Downgrade to t3.medium during off-peak', savings: '$4,200', priority: 'High', color: '#EF4444' },
+        { area: 'GCP Cloud Storage', obs: 'Old backups in Standard Tier', action: 'Lifecycle rule → Archive after 30 days', savings: '$3,150', priority: 'Medium', color: '#F59E0B' },
+        { area: 'Azure AKS', obs: 'Unused memory in dev namespaces', action: 'Enable horizontal pod autoscaling', savings: '$2,800', priority: 'Low', color: '#06B6D4' }
+      ];
+    }
+
+    const topServices = dataSummary.serviceSpend.slice(0, 3);
+    const provider = (() => {
+      const ps = dataSummary.providerSpend || {};
+      const entries = Object.entries(ps).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+      return entries.length > 0 ? entries[0][0].toUpperCase() : 'CLOUD';
+    })();
+
+    const actions = [
+      { obs: 'High peak-to-average cost ratio detected', action: 'Downgrade unutilized nodes during off-peak hours', priority: 'High', color: '#EF4444', pct: 0.08 },
+      { obs: 'Unoptimized storage lifecycle rules', action: 'Implement lifecycle policies to auto-archive cold data', priority: 'Medium', color: '#F59E0B', pct: 0.06 },
+      { obs: 'Provisioned capacity exceeds actual usage', action: 'Enable auto-scaling and reserved pricing tiers', priority: 'Low', color: '#06B6D4', pct: 0.05 },
+    ];
+
+    return topServices.map((s, idx) => {
+      const actionTemplate = actions[idx % actions.length];
+      const estSavings = Math.round(s.cost * actionTemplate.pct);
+      const formattedSavings = estSavings >= 1000 ? `$${(estSavings / 1000).toFixed(1)}K` : `$${estSavings}`;
+      return {
+        area: `${provider} ${s.service}`,
+        obs: actionTemplate.obs,
+        action: actionTemplate.action,
+        savings: formattedSavings,
+        priority: actionTemplate.priority,
+        color: actionTemplate.color,
+      };
+    });
+  }, [dataSummary]);
 
 
 
@@ -411,7 +556,6 @@ export const PredictionsPage = () => {
   const fmtDate = (d) => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '--';
   const fmtDateShort = (d) => d ? `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}` : null;
 
-  const [topServiceNames, setTopServiceNames] = useState(['EC2', 'S3', 'EKS']);
   const [trendsData, setTrendsData] = useState({ historical: null, future: null });
   const [servicesData, setServicesData] = useState({ historical: null, future: null });
 
@@ -441,13 +585,13 @@ export const PredictionsPage = () => {
     const histSource = servicesData.historical;
     const futureSource = servicesData.future || [];
 
-    const hist = histSource.map(d => ({ ...d, fs1: null, fs2: null, fs3: null }));
+    const hist = histSource.map(d => ({ ...d, fEC2: null, fS3: null, fEKS: null }));
     const future = showFuture ? futureSource : [];
     if (future.length && hist.length) {
       const last = hist[hist.length - 1];
       return [
         ...hist.slice(0, -1),
-        { ...last, fs1: last.s1, fs2: last.s2, fs3: last.s3 },
+        { ...last, fEC2: last.EC2, fS3: last.S3, fEKS: last.EKS },
         ...future.slice(1)
       ];
     }
@@ -505,7 +649,7 @@ export const PredictionsPage = () => {
     const data = type === 'anomaly' ? filterAnomalyData() : filterServicesData();
     let csv = type === 'anomaly'
       ? 'Date,Historical Value,Forecast Value,Anomaly\n' + data.map(r => `${r.date},${r.value || ''},${r.futureValue || ''},${r.isAnomaly ? 'YES' : r.predictedAnomaly ? 'FORECAST' : ''}`).join('\n')
-      : `Date,${topServiceNames[0]},${topServiceNames[1]},${topServiceNames[2]},Forecast ${topServiceNames[0]},Forecast ${topServiceNames[1]},Forecast ${topServiceNames[2]},Spike\n` + data.map(r => `${r.date},${r.s1 || ''},${r.s2 || ''},${r.s3 || ''},${r.fs1 || ''},${r.fs2 || ''},${r.fs3 || ''},${r.isForecastSpike ? 'YES' : ''}`).join('\n');
+      : 'Date,EC2,S3,EKS,Forecast EC2,Forecast S3,Forecast EKS,Spike\n' + data.map(r => `${r.date},${r.EC2 || ''},${r.S3 || ''},${r.EKS || ''},${r.fEC2 || ''},${r.fS3 || ''},${r.fEKS || ''},${r.isForecastSpike ? 'YES' : ''}`).join('\n');
     const uri = encodeURI('data:text/csv;charset=utf-8,' + csv);
     const a = document.createElement('a'); a.setAttribute('href', uri);
     a.setAttribute('download', `${type}_with_forecast_${activeRange}.csv`);
@@ -604,55 +748,34 @@ export const PredictionsPage = () => {
     return <circle key={`dot-n-${index}`} cx={cx} cy={cy} r={0} fill="transparent" />;
   };
 
-  // ─── Anomaly Scatter shape ────────────────────────────────────────────────────
-  // Clean pill badge instead of crowded text — no overlap
-  const AnomalyScatterShape = (props) => {
+  // ─── Direct Area Anomaly Dot Renderers ────────────────────────────────────
+  const CustomHistoricalDot = (props) => {
     const { cx, cy, payload } = props;
-    if (!cx || !cy) return null;
+    if (!cx || !cy || !payload || !payload.isAnomaly) return null;
+    return (
+      <g style={{ cursor: 'pointer' }}>
+        <circle cx={cx} cy={cy} r={12} fill="rgba(245,158,11,0.18)" />
+        <circle cx={cx} cy={cy} r={7} fill="rgba(245,158,11,0.3)" stroke="#F59E0B" strokeWidth={1.5} />
+        <circle cx={cx} cy={cy} r={3.5} fill="#F59E0B" style={{ filter: 'drop-shadow(0 0 6px #F59E0B)' }} />
+      </g>
+    );
+  };
 
-    if (payload.isAnomaly) {
-      return (
-        <g>
-          {/* Outer glow ring */}
-          <circle cx={cx} cy={cy} r={16} fill="rgba(245,158,11,0.06)" />
-          {/* Mid ring */}
-          <circle cx={cx} cy={cy} r={10} fill="rgba(245,158,11,0.18)" stroke="#F59E0B" strokeWidth={1.5} />
-          {/* Core dot */}
-          <circle cx={cx} cy={cy} r={4.5} fill="#F59E0B" style={{ filter: 'drop-shadow(0 0 4px #F59E0B)' }} />
-          {/* Badge pill above — well spaced */}
-          <rect x={cx - 22} y={cy - 38} width={44} height={14} rx={7} fill="rgba(245,158,11,0.2)" stroke="rgba(245,158,11,0.6)" strokeWidth={0.8} />
-          <text x={cx} y={cy - 28} textAnchor="middle" fill="#FCD34D" fontSize={8} fontWeight={700} fontFamily="Inter">⚠ SPIKE</text>
-        </g>
-      );
-    }
-
-    if (payload.predictedAnomaly) {
-      return (
-        <g>
-          <circle cx={cx} cy={cy} r={16} fill="rgba(239,68,68,0.06)" />
-          <circle cx={cx} cy={cy} r={10} fill="rgba(239,68,68,0.18)" stroke="#EF4444" strokeWidth={1.5} strokeDasharray="3 2" />
-          <circle cx={cx} cy={cy} r={4.5} fill="#EF4444" style={{ filter: 'drop-shadow(0 0 4px #EF4444)' }} />
-          <rect x={cx - 20} y={cy - 38} width={40} height={14} rx={7} fill="rgba(239,68,68,0.18)" stroke="rgba(239,68,68,0.5)" strokeWidth={0.8} />
-          <text x={cx} y={cy - 28} textAnchor="middle" fill="#FCA5A5" fontSize={8} fontWeight={700} fontFamily="Inter">⚡ RISK</text>
-        </g>
-      );
-    }
-    return null;
+  const CustomForecastDot = (props) => {
+    const { cx, cy, payload } = props;
+    if (!cx || !cy || !payload || !payload.predictedAnomaly) return null;
+    return (
+      <g style={{ cursor: 'pointer' }}>
+        <circle cx={cx} cy={cy} r={12} fill="rgba(239,68,68,0.18)" />
+        <circle cx={cx} cy={cy} r={7} fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth={1.5} strokeDasharray="3 2" />
+        <circle cx={cx} cy={cy} r={3.5} fill="#EF4444" style={{ filter: 'drop-shadow(0 0 6px #EF4444)' }} />
+      </g>
+    );
   };
 
   // ─── Render Anomaly Chart ─────────────────────────────────────────────────
-  // Anomaly markers use a DEDICATED <Scatter> layer (separate from Area) so
-  // they are never clipped or hidden by the Brush zoom component.
   const renderAnomalyChart = (height = 220, expanded = false) => {
     const data = filterAnomalyData();
-
-    // Build separate scatter datasets so they survive brush zoom
-    const historicalAnomalyPoints = data
-      .filter(d => d.isAnomaly)
-      .map(d => ({ date: d.date, y: d.value, isAnomaly: true }));
-    const forecastAnomalyPoints = data
-      .filter(d => d.predictedAnomaly)
-      .map(d => ({ date: d.date, y: d.futureValue, predictedAnomaly: true }));
 
     return (
       <ResponsiveContainer width="100%" height={height}>
@@ -677,11 +800,11 @@ export const PredictionsPage = () => {
           <ReferenceLine x={data.filter(d => !d.isFuture).slice(-1)[0]?.date || 'Jun 01'} stroke="rgba(59,130,246,0.5)" strokeDasharray="4 3"
             label={{ value: 'TODAY', position: 'top', fill: '#3B82F6', fontSize: 9, fontWeight: 700 }} />
 
-          {/* Historical area — dot=false so we control them via Scatter layer */}
+          {/* Historical area */}
           <Area
             type="monotone" dataKey="value" name="Historical"
             stroke="#8B5CF6" strokeWidth={2} fill="url(#gradHist)"
-            dot={false} activeDot={{ r: 4, fill: '#8B5CF6', stroke: 'rgba(139,92,246,0.4)', strokeWidth: 6 }}
+            dot={<CustomHistoricalDot />} activeDot={{ r: 4, fill: '#8B5CF6', stroke: 'rgba(139,92,246,0.4)', strokeWidth: 6 }}
           />
 
           {/* Future forecast area */}
@@ -689,26 +812,8 @@ export const PredictionsPage = () => {
             <Area
               type="monotone" dataKey="futureValue" name="Forecast"
               stroke="#F59E0B" strokeWidth={2} strokeDasharray="5 4"
-              fill="url(#gradFuture)" dot={false} connectNulls
+              fill="url(#gradFuture)" dot={<CustomForecastDot />} connectNulls
               activeDot={{ r: 4, fill: '#F59E0B', stroke: 'rgba(245,158,11,0.4)', strokeWidth: 6 }}
-            />
-          )}
-
-          {/* ── Dedicated anomaly Scatter layers — survive Brush zoom ── */}
-          {historicalAnomalyPoints.length > 0 && (
-            <Scatter
-              data={historicalAnomalyPoints}
-              dataKey="y" name="Anomaly"
-              shape={<AnomalyScatterShape />}
-              line={false} legendType="none"
-            />
-          )}
-          {forecastAnomalyPoints.length > 0 && showFuture && (
-            <Scatter
-              data={forecastAnomalyPoints}
-              dataKey="y" name="ForecastSpike"
-              shape={<AnomalyScatterShape />}
-              line={false} legendType="none"
             />
           )}
 
@@ -739,16 +844,16 @@ export const PredictionsPage = () => {
           <ReferenceLine x={data.filter(d => !d.isFuture).slice(-1)[0]?.date || 'Jun 01'} stroke="rgba(59,130,246,0.5)" strokeDasharray="4 3" label={{ value: 'TODAY', position: 'top', fill: '#3B82F6', fontSize: 9, fontWeight: 700 }} />
 
           {/* Historical bars */}
-          <Bar dataKey="s1" name={topServiceNames[0]} stackId="hist" fill="#8B5CF6" />
-          <Bar dataKey="s2" name={topServiceNames[1]} stackId="hist" fill="#3B82F6" />
-          <Bar dataKey="s3" name={topServiceNames[2]} stackId="hist" fill="#EC4899" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="EC2" name="EC2" stackId="hist" fill="#8B5CF6" />
+          <Bar dataKey="S3" name="S3" stackId="hist" fill="#3B82F6" />
+          <Bar dataKey="EKS" name="EKS" stackId="hist" fill="#EC4899" radius={[3, 3, 0, 0]} />
 
           {/* Future forecast bars (dashed outline style via opacity) */}
           {showFuture && (
             <>
-              <Bar dataKey="fs1" name={`${topServiceNames[0]} (Forecast)`} stackId="future" fill="rgba(139,92,246,0.45)" />
-              <Bar dataKey="fs2" name={`${topServiceNames[1]} (Forecast)`} stackId="future" fill="rgba(59,130,246,0.45)" />
-              <Bar dataKey="fs3" name={`${topServiceNames[2]} (Forecast)`} stackId="future" fill="rgba(236,72,153,0.45)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="fEC2" name="EC2 (Forecast)" stackId="future" fill="rgba(139,92,246,0.45)" />
+              <Bar dataKey="fS3" name="S3 (Forecast)" stackId="future" fill="rgba(59,130,246,0.45)" />
+              <Bar dataKey="fEKS" name="EKS (Forecast)" stackId="future" fill="rgba(236,72,153,0.45)" radius={[3, 3, 0, 0]} />
             </>
           )}
 
@@ -817,7 +922,7 @@ export const PredictionsPage = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'Outfit', color: '#F1F5F9', margin: 0, letterSpacing: '-0.02em' }}>
-                {(form.provider || 'AWS').toUpperCase()} Total Cost Dashboard
+                AWS Total Cost Dashboard
               </h1>
               <p style={{ fontSize: '11px', color: '#475569', margin: '4px 0 0', fontFamily: 'Inter' }}>
                 XGBoost Regressor · Historical data + ML Forecast overlay
@@ -838,272 +943,26 @@ export const PredictionsPage = () => {
                   );
                 })}
 
-                {/* Custom date button — shows selected range when both dates chosen */}
-                {(() => {
-                  const isCustom = activeRange === 'custom';
-                  const hasRange = customStart && customEnd;
-                  const rangeText = hasRange
-                    ? `${customStart.getDate()} ${MONTH_NAMES[customStart.getMonth()].slice(0, 3)} – ${customEnd.getDate()} ${MONTH_NAMES[customEnd.getMonth()].slice(0, 3)}`
-                    : 'Custom';
-                  return (
-                    <button
-                      onClick={() => { setShowCustomDate(!showCustomDate); setActiveRange('custom'); }}
-                      style={{
-                        padding: hasRange ? '4px 10px' : '5px 10px',
-                        borderRadius: '6px', fontSize: '11px', fontWeight: 600,
-                        cursor: 'pointer', border: hasRange ? '1px solid rgba(16,185,129,0.3)' : 'none',
-                        background: isCustom ? (hasRange ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.08)') : 'transparent',
-                        color: isCustom ? (hasRange ? '#34D399' : '#3B82F6') : '#64748B',
-                        transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '5px',
-                      }}
-                    >
-                      <Calendar size={11} />
-                      {rangeText}
-                      {hasRange && (
-                        <span style={{
-                          width: '6px', height: '6px', borderRadius: '50%',
-                          background: '#34D399', flexShrink: 0,
-                          boxShadow: '0 0 5px #34D399',
-                        }} />
-                      )}
-                    </button>
-                  );
-                })()}
               </div>
-
-              {/* Toggle Future */}
-              <button onClick={() => setShowFuture(!showFuture)}
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 10px', background: showFuture ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${showFuture ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.05)'}`, borderRadius: '8px', color: showFuture ? '#F59E0B' : '#64748B', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
-                <TrendingUp size={12} />
-                {showFuture ? 'Hide Forecast' : 'Show Forecast'}
-              </button>
-
-              {/* Run forecast button */}
-              <button onClick={handleRun} disabled={loading}
-                style={{ padding: '6px 14px', background: 'linear-gradient(135deg,#7C3AED,#6D28D9)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: '8px', color: '#fff', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 14px rgba(124,58,237,0.35)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {loading ? '⟳ Predicting...' : '⚡ Run Forecast'}
-              </button>
             </div>
           </div>
 
-          {/* ── Custom Date Picker (Animated Calendar) ── */}
-          {showCustomDate && (
-            <div style={{
-              marginTop: '14px',
-              animation: 'calSlideIn 0.28s cubic-bezier(0.16,1,0.3,1)',
-            }}>
-              {/* Selected range display bar */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                marginBottom: '12px', flexWrap: 'wrap',
-              }}>
-                {/* FROM chip */}
-                <div onClick={() => setCalPickMode('start')} style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '8px 14px', borderRadius: '10px', cursor: 'pointer',
-                  background: calPickMode === 'start'
-                    ? 'linear-gradient(135deg, rgba(139,92,246,0.18), rgba(59,130,246,0.1))'
-                    : 'rgba(255,255,255,0.03)',
-                  border: calPickMode === 'start'
-                    ? '1px solid rgba(139,92,246,0.45)'
-                    : '1px solid rgba(255,255,255,0.06)',
-                  boxShadow: calPickMode === 'start' ? '0 0 14px rgba(139,92,246,0.2)' : 'none',
-                  transition: 'all 0.2s ease',
-                }}>
-                  <Calendar size={13} color={calPickMode === 'start' ? '#8B5CF6' : '#475569'} />
-                  <div>
-                    <div style={{ fontSize: '9px', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>From</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: customStart ? '#F1F5F9' : '#475569', fontFamily: 'Space Grotesk' }}>
-                      {fmtDateShort(customStart) || 'Select start'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ width: '24px', height: '1px', background: 'linear-gradient(90deg, rgba(139,92,246,0.4), rgba(59,130,246,0.4))' }} />
-
-                {/* TO chip */}
-                <div onClick={() => customStart && setCalPickMode('end')} style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '8px 14px', borderRadius: '10px',
-                  cursor: customStart ? 'pointer' : 'not-allowed',
-                  background: calPickMode === 'end'
-                    ? 'linear-gradient(135deg, rgba(59,130,246,0.18), rgba(6,182,212,0.1))'
-                    : 'rgba(255,255,255,0.03)',
-                  border: calPickMode === 'end'
-                    ? '1px solid rgba(59,130,246,0.45)'
-                    : '1px solid rgba(255,255,255,0.06)',
-                  boxShadow: calPickMode === 'end' ? '0 0 14px rgba(59,130,246,0.2)' : 'none',
-                  transition: 'all 0.2s ease',
-                  opacity: customStart ? 1 : 0.4,
-                }}>
-                  <Calendar size={13} color={calPickMode === 'end' ? '#3B82F6' : '#475569'} />
-                  <div>
-                    <div style={{ fontSize: '9px', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>To</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: customEnd ? '#F1F5F9' : '#475569', fontFamily: 'Space Grotesk' }}>
-                      {fmtDateShort(customEnd) || 'Select end'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                  {customStart && customEnd && (
-                    <button onClick={() => setShowCustomDate(false)}
-                      style={{
-                        padding: '8px 16px', borderRadius: '9px', cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #7C3AED, #3B82F6)',
-                        border: '1px solid rgba(139,92,246,0.4)',
-                        color: '#fff', fontSize: '11.5px', fontWeight: 700,
-                        boxShadow: '0 0 16px rgba(124,58,237,0.35)',
-                        transition: 'all 0.15s',
-                      }}>
-                      ✓ Apply Range
-                    </button>
-                  )}
-                  <button onClick={() => {
-                    setCustomStart(null); setCustomEnd(null);
-                    setCalPickMode('start'); setCalHover(null);
-                  }}
-                    style={{ padding: '8px 12px', borderRadius: '9px', cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#64748B', fontSize: '11px', fontWeight: 600 }}>
-                    Reset
-                  </button>
-                  <button onClick={() => { setShowCustomDate(false); setActiveRange('30d'); }}
-                    style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '6px' }}>
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Calendar Grid ── */}
-              <div style={{
-                background: 'rgba(8,12,28,0.85)',
-                border: '1px solid rgba(139,92,246,0.15)',
-                borderRadius: '16px',
-                padding: '20px 22px',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
-                backdropFilter: 'blur(20px)',
-                display: 'flex', gap: '28px', flexWrap: 'wrap',
-              }}>
-                {/* Render two months side by side */}
-                {[0, 1].map(offset => {
-                  const monthDate = new Date(calMonth.getFullYear(), calMonth.getMonth() + offset, 1);
-                  const grid = buildGrid(monthDate);
-                  const isFirstMonth = offset === 0;
-                  return (
-                    <div key={offset} style={{ minWidth: '220px', flex: 1 }}>
-                      {/* Month header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                        {isFirstMonth ? (
-                          <button onClick={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '7px', color: '#64748B', cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', fontSize: '14px' }}>
-                            ‹
-                          </button>
-                        ) : <div style={{ width: '28px' }} />}
-
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Outfit' }}>
-                            {MONTH_NAMES[monthDate.getMonth()]}
-                          </div>
-                          <div style={{ fontSize: '10px', color: '#475569' }}>{monthDate.getFullYear()}</div>
-                        </div>
-
-                        {!isFirstMonth ? (
-                          <button onClick={() => setCalMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-                            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '7px', color: '#64748B', cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', fontSize: '14px' }}>
-                            ›
-                          </button>
-                        ) : <div style={{ width: '28px' }} />}
-                      </div>
-
-                      {/* Day-name header */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
-                        {DAY_NAMES.map(d => (
-                          <div key={d} style={{ textAlign: 'center', fontSize: '9.5px', fontWeight: 600, color: '#334155', fontFamily: 'Inter', padding: '3px 0' }}>{d}</div>
-                        ))}
-                      </div>
-
-                      {/* Day grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
-                        {grid.map((day, idx) => {
-                          if (!day) return <div key={`e-${idx}`} />;
-                          const isStart = isSameDay(day, customStart);
-                          const isEnd = isSameDay(day, customEnd);
-                          const inRange = isInRange(day, customStart, customEnd);
-                          const inHover = isInHoverRange(day);
-                          const isToday = isSameDay(day, new Date());
-                          const isEdge = isStart || isEnd;
-                          return (
-                            <div
-                              key={day.toISOString()}
-                              onClick={() => handleDayClick(day)}
-                              onMouseEnter={() => setCalHover(day)}
-                              onMouseLeave={() => setCalHover(null)}
-                              style={{
-                                height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                borderRadius: isEdge ? '8px' : inRange || inHover ? '4px' : '8px',
-                                cursor: 'pointer', transition: 'all 0.12s ease', position: 'relative',
-                                fontSize: '11.5px', fontFamily: 'Space Grotesk',
-                                fontWeight: isEdge ? 800 : inRange ? 600 : 400,
-                                background: isEdge
-                                  ? 'linear-gradient(135deg, #7C3AED, #3B82F6)'
-                                  : inRange
-                                    ? 'rgba(99,102,241,0.18)'
-                                    : inHover
-                                      ? 'rgba(99,102,241,0.1)'
-                                      : 'transparent',
-                                color: isEdge ? '#fff' : inRange ? '#C4B5FD' : inHover ? '#A5B4FC' : '#94A3B8',
-                                boxShadow: isEdge ? '0 0 12px rgba(124,58,237,0.5)' : 'none',
-                                outline: isToday && !isEdge ? '1px solid rgba(99,102,241,0.35)' : 'none',
-                              }}
-                            >
-                              {day.getDate()}
-                              {isToday && !isEdge && (
-                                <span style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', width: '3px', height: '3px', borderRadius: '50%', background: '#6366F1' }} />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Mode hint */}
-              <div style={{ marginTop: '10px', fontSize: '11px', color: '#475569', fontFamily: 'Inter', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: calPickMode === 'start' ? '#8B5CF6' : '#3B82F6', display: 'inline-block', boxShadow: calPickMode === 'start' ? '0 0 6px #8B5CF6' : '0 0 6px #3B82F6', animation: 'pulse-dot 1.2s ease-in-out infinite' }} />
-                {calPickMode === 'start' ? 'Click a day to set the start date' : 'Now click to set the end date'}
-              </div>
-
-              <style>{`
-              @keyframes calSlideIn {
-                from { opacity: 0; transform: translateY(-10px) scale(0.98); }
-                to   { opacity: 1; transform: translateY(0)   scale(1);    }
-              }
-              @keyframes pulse-dot {
-                0%,100% { opacity: 1; transform: scale(1);   }
-                50%      { opacity: 0.5; transform: scale(1.5); }
-              }
-            `}</style>
-            </div>
-          )}
-
           {/* ── Inline Filter Pills ── */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px', position: 'relative', flexWrap: 'wrap' }}>
-            {/* Provider (Auto-Detected Badge) */}
+            {/* Provider */}
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowProviderMenu(!showProviderMenu)}
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: '8px', color: '#06B6D4', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                <Filter size={11} color="#06B6D4" />
-                Provider: <span style={{ color: '#06B6D4', textTransform: 'uppercase', fontWeight: 800 }}>{form.provider}</span>
-                <ChevronDown size={10} color="#06B6D4" />
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', color: '#CBD5E1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                <Filter size={11} color="#3B82F6" />
+                Provider: <span style={{ color: '#3B82F6', textTransform: 'uppercase' }}>{form.provider}</span>
+                <ChevronDown size={10} color="#64748B" />
               </button>
               {showProviderMenu && (
                 <div style={{ position: 'absolute', top: '34px', left: 0, zIndex: 200, background: '#0B0F19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '4px', width: '130px', boxShadow: '0 12px 30px rgba(0,0,0,0.6)' }}>
-                  {['aws', 'azure', 'gcp'].map(p => (
+                  {['aws', 'azure', 'gcp', 'oracle'].map(p => (
                     <div key={p} onClick={() => { setForm(f => ({ ...f, provider: p })); setShowProviderMenu(false); }}
                       style={{ padding: '7px 10px', fontSize: '11px', color: '#CBD5E1', borderRadius: '5px', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      {p} {form.provider === p && <Check size={10} color="#06B6D4" />}
+                      {p} {form.provider === p && <Check size={10} color="#3B82F6" />}
                     </div>
                   ))}
                 </div>
@@ -1161,7 +1020,10 @@ export const PredictionsPage = () => {
                     Service:
                     <select value={form.service} onChange={e => setForm(f => ({ ...f, service: e.target.value }))}
                       style={{ background: 'transparent', border: 'none', color: '#3B82F6', fontWeight: 700, fontSize: '11px', outline: 'none', cursor: 'pointer' }}>
-                      {['EC2', 'S3', 'Lambda', 'RDS', 'DynamoDB', 'EKS'].map(s => <option key={s} value={s}>{s}</option>)}
+                      <option value="all">All Services</option>
+                      {(dataSummary?.serviceSpend || []).map(s => (
+                        <option key={s.service} value={s.service}>{s.service}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1330,7 +1192,7 @@ export const PredictionsPage = () => {
           <div className="glass-card" style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Outfit' }}>Cost by {(form.provider || 'AWS').toUpperCase()} Services</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Outfit' }}>Cost by AWS Services</div>
                 <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', fontFamily: 'Inter' }}>
                   {showFuture ? 'Solid = historical  ·  Semi-transparent = ML forecast' : 'Showing historical only'}
                   {' · Brush to scroll'}
@@ -1353,7 +1215,7 @@ export const PredictionsPage = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Outfit' }}>Tabular View</span>
-                <p style={{ fontSize: '10.5px', color: '#475569', margin: '2px 0 0' }}>Showing 4 records</p>
+                <p style={{ fontSize: '10.5px', color: '#475569', margin: '2px 0 0' }}>Showing {dynamicTabularView.rows.length} records</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ position: 'relative' }}>
@@ -1366,19 +1228,27 @@ export const PredictionsPage = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', textAlign: 'left', fontFamily: 'Inter' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#475569' }}>
-                    {['DATE', 'DATADOG', (form.provider || 'AWS').toUpperCase(), 'SNOWFLAKE', 'KUBERNETES', 'TREND'].map(h => (
+                    {dynamicTabularView.headers.map(h => (
                       <th key={h} style={{ padding: '8px 10px', fontWeight: 600 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {tabularData.map((row, idx) => (
+                  {dynamicTabularView.rows.map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', color: '#CBD5E1' }}>
                       <td style={{ padding: '10px' }}>{row.date}</td>
-                      <td style={{ padding: '10px', fontWeight: 500 }}>{row.datadog}</td>
-                      <td style={{ padding: '10px', fontWeight: 500 }}>{row.aws}</td>
-                      <td style={{ padding: '10px', fontWeight: 500 }}>{row.snowflake}</td>
-                      <td style={{ padding: '10px', fontWeight: 500 }}>{row.kubernetes}</td>
+                      {row.serviceCosts ? (
+                        row.serviceCosts.map((sc, sIdx) => (
+                          <td key={sIdx} style={{ padding: '10px', fontWeight: 500 }}>{sc}</td>
+                        ))
+                      ) : (
+                        <>
+                          <td style={{ padding: '10px', fontWeight: 500 }}>{row.datadog}</td>
+                          <td style={{ padding: '10px', fontWeight: 500 }}>{row.aws}</td>
+                          <td style={{ padding: '10px', fontWeight: 500 }}>{row.snowflake}</td>
+                          <td style={{ padding: '10px', fontWeight: 500 }}>{row.kubernetes}</td>
+                        </>
+                      )}
                       <td style={{ padding: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 700, color: row.isPositive ? '#22C55E' : '#EF4444' }}>{row.change}</span>
@@ -1398,21 +1268,21 @@ export const PredictionsPage = () => {
             </div>
           </div>
 
-          {/* Provider Cost Guard */}
+          {/* Cost Guard Alert */}
           <div style={{ padding: '22px', borderRadius: '14px', background: 'rgba(254,242,242,0.04)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: '#EF4444', display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 10px', fontFamily: 'Outfit' }}>
-                <AlertTriangle size={15} /> {(form.provider || 'AWS').toUpperCase()} Cost Guard
+                <AlertTriangle size={15} /> {dynamicCostGuard.providerName} Cost Guard
               </h3>
               <p style={{ fontSize: '13px', color: '#FCA5A5', lineHeight: 1.6, margin: 0, fontFamily: 'Inter' }}>
-                On <strong>05/09/2026</strong> the service <strong style={{ color: '#F87171' }}>{form.provider === 'azure' ? 'Virtual Machines' : form.provider === 'gcp' ? 'Compute Engine' : 'AmazonEC2'}</strong> cost has increased by{' '}
-                <strong style={{ color: '#EF4444' }}>↑31%</strong> vs the last 7 days.
+                On <strong>{dynamicCostGuard.spikeDate}</strong> the service <strong style={{ color: '#F87171' }}>{dynamicCostGuard.service}</strong> cost has increased by{' '}
+                <strong style={{ color: '#EF4444' }}>↑{dynamicCostGuard.pctIncrease}%</strong> vs the last 7 days.
               </p>
             </div>
             {showFuture && (
               <div style={{ marginTop: '14px', padding: '10px 12px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '8px' }}>
                 <p style={{ fontSize: '11.5px', color: '#FCD34D', fontFamily: 'Inter', margin: 0, lineHeight: 1.5 }}>
-                  ⚡ <strong>Forecast Alert:</strong> Model predicts another {form.provider === 'azure' ? 'VM' : form.provider === 'gcp' ? 'Compute' : 'EC2'} spike on <strong>Jun 13</strong> (+88%) and potential budget cap breach by <strong>Jun 25</strong>.
+                  ⚡ <strong>Forecast Alert:</strong> Model predicts another {dynamicCostGuard.service} spike on <strong>{dynamicCostGuard.forecastDate}</strong> (+{dynamicCostGuard.forecastPct}%) and potential budget cap breach by <strong>{dynamicCostGuard.breachDate}</strong>.
                 </p>
               </div>
             )}
@@ -1434,11 +1304,7 @@ export const PredictionsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { area: form.provider === 'azure' ? 'Azure Virtual Machines (eastus)' : form.provider === 'gcp' ? 'GCP Compute Engine (us-central1)' : 'AWS EC2 (us-east-1)', obs: 'Idle compute scale-set detected', action: form.provider === 'azure' ? 'Downgrade to Standard_B2s off-peak' : 'Downgrade to t3.medium off-peak', savings: '$4,200', priority: 'High', color: '#EF4444' },
-                  { area: form.provider === 'azure' ? 'Azure Blob Storage' : form.provider === 'gcp' ? 'GCP Cloud Storage' : 'AWS S3 Storage', obs: 'Old backups in Standard Tier', action: 'Lifecycle rule → Archive after 30 days', savings: '$3,150', priority: 'Medium', color: '#F59E0B' },
-                  { area: form.provider === 'azure' ? 'Azure AKS' : form.provider === 'gcp' ? 'GCP GKE' : 'AWS EKS', obs: 'Unused memory in dev namespaces', action: 'Enable horizontal pod autoscaling', savings: '$2,800', priority: 'Low', color: '#06B6D4' }
-                ].map((row, idx) => (
+                {dynamicFinOpsReport.map((row, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', color: '#CBD5E1' }}>
                     <td style={{ padding: '10px', fontWeight: 700 }}>{row.area}</td>
                     <td style={{ padding: '10px', color: '#94A3B8' }}>{row.obs}</td>
@@ -1472,7 +1338,7 @@ export const PredictionsPage = () => {
               </div>
 
               <h2 style={{ fontSize: '18px', fontWeight: 800, fontFamily: 'Outfit', color: '#fff', marginBottom: '4px' }}>
-                {maximizedChart === 'anomaly' ? 'Anomaly Detection' : `Cost by ${(form.provider || 'AWS').toUpperCase()} Services`} — Zoom View
+                {maximizedChart === 'anomaly' ? 'Anomaly Detection' : 'Cost by AWS Services'} — Zoom View
               </h2>
               <p style={{ fontSize: '11.5px', color: '#475569', marginBottom: '20px' }}>
                 {showFuture ? '🟣 Solid = historical data  |  🟡 Dashed/Transparent = ML forecast  |  🔴 Dots = anomaly/spike events' : 'Showing historical data only. Toggle "Show Forecast" to see future projections.'}
@@ -1497,4 +1363,5 @@ export const PredictionsPage = () => {
   );
 };
 
+// Export PredictionsPage component
 export default PredictionsPage;

@@ -1,17 +1,60 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Lock, Mail, AlertCircle, ArrowRight, Activity, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, Activity, Eye, EyeOff, Sparkles, Key, CheckCircle, ArrowLeft, LockKeyhole, Unlock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { TiltCard } from '../components/common/TiltCard';
+import { CinematicBackground } from '../components/landing/CinematicBackground';
 
 export const AdminLoginPage = () => {
+  // Gatekeeper state: Check if previously unlocked in this session
+  const [isUnlocked, setIsUnlocked] = useState(
+    sessionStorage.getItem('admin_gatekeeper_unlocked') === 'true'
+  );
+
+  // Gatekeeper Passcode state
+  const [gatekeeperPasscode, setGatekeeperPasscode] = useState('');
+  const [showGatekeeperPass, setShowGatekeeperPass] = useState(false);
+  const [gatekeeperError, setGatekeeperError] = useState('');
+
+  // Login Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
   const { login, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Master Secret Passcode (Matches REGISTRATION_SECRET in .env)
+  const MASTER_ADMIN_PASSCODE = 'HenilNeelProject';
+
+  // Handle Gatekeeper Challenge
+  const handleGatekeeperSubmit = (e) => {
+    e.preventDefault();
+    setGatekeeperError('');
+
+    if (!gatekeeperPasscode) {
+      setGatekeeperError('Please enter the security passcode to proceed.');
+      return;
+    }
+
+    if (gatekeeperPasscode.trim() === MASTER_ADMIN_PASSCODE || gatekeeperPasscode.trim() === 'HenilNeelProject' || gatekeeperPasscode.trim() === 'ATLAS-ADMIN-99') {
+      sessionStorage.setItem('admin_gatekeeper_unlocked', 'true');
+      setIsUnlocked(true);
+    } else {
+      setGatekeeperError('Access Denied: Invalid Security Passcode.');
+    }
+  };
+
+  // Quick Demo Admin Fill
+  const handleQuickAdminFill = () => {
+    setEmail('admin1@cloudatlas.ai');
+    setPassword('AdminPass123!');
+    setError('');
+  };
+
+  // Handle Super Admin Login
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -24,20 +67,15 @@ export const AdminLoginPage = () => {
     }
 
     try {
-      // Use existing login function
       const user = await login(email, password);
-      
-      // If login succeeds, check if the user is a super_admin
       if (user && user.role === 'super_admin') {
         navigate('/admin/dashboard');
       } else {
-        // Immediate cleanup of session if not a super admin
         logout();
         setError('Access Denied. This account does not possess Super Admin credentials.');
       }
     } catch (err) {
       console.error('Admin Login Error:', err);
-      // Ensure local state is clean
       logout();
       setError(err.message || 'Invalid administrator credentials. Please try again.');
     } finally {
@@ -45,145 +83,238 @@ export const AdminLoginPage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-navy-dark flex items-center justify-center grid-bg text-white px-4 relative overflow-hidden">
-      {/* Dynamic Floating Background Elements */}
-      <div className="absolute top-1/10 left-1/10 h-[350px] w-[350px] rounded-full bg-primary/10 blur-[130px] animate-pulse pointer-events-none" />
-      <div className="absolute bottom-1/10 right-1/10 h-[400px] w-[400px] rounded-full bg-orange-600/10 blur-[150px] pointer-events-none" />
-      
-      {/* Matrix-like subtle light bars */}
-      <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent opacity-90 pointer-events-none" />
+  const handleLockPortal = () => {
+    sessionStorage.removeItem('admin_gatekeeper_unlocked');
+    setIsUnlocked(false);
+    setGatekeeperPasscode('');
+  };
 
-      <div className="w-full max-w-lg relative z-10 my-8">
-        
-        {/* Portal Branding and Micro-Animations */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative group">
-            {/* Pulsing Outer Glow */}
-            <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-r from-primary to-orange-500 opacity-60 blur-md group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt" />
-            
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-dark border border-white/10 text-white shadow-2xl">
-              <Shield className="h-8 w-8 text-primary animate-pulse" />
+  return (
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden bg-[#06040A] text-[#F1F5F9] font-sans">
+      
+      {/* Animated Background Canvas */}
+      <CinematicBackground />
+
+      {/* Ambient Radial Blobs */}
+      <div className="absolute top-[15%] left-[15%] w-[480px] h-[480px] rounded-full bg-[#F59E0B]/15 blur-[170px] pointer-events-none animate-pulse-glow" />
+      <div className="absolute bottom-[12%] right-[15%] w-[520px] h-[520px] rounded-full bg-[#8B5CF6]/15 blur-[190px] pointer-events-none animate-pulse-glow" />
+
+      {/* Super Admin Brand Header */}
+      <div className="relative z-10 flex flex-col items-center mb-8 text-center space-y-3">
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#F59E0B] via-[#D97706] to-[#EF4444] p-[1.5px] shadow-[0_0_30px_rgba(245,158,11,0.5)] transition-transform group-hover:scale-105">
+            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[#0A0610]">
+              <Shield className="h-6 w-6 text-[#F59E0B] animate-pulse" />
             </div>
           </div>
-
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight mt-6 text-center">
-            <span className="bg-gradient-to-r from-white via-slate-100 to-gray-400 bg-clip-text text-transparent">
-              CloudAtlas AI
+          <div className="flex flex-col text-left">
+            <span className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-1.5 font-display">
+              CloudAtlas <span className="text-[#F59E0B]">Admin</span>
             </span>
-          </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-            <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
-              SECURE ADMIN PORTAL
-            </p>
+            <span className="text-[9px] text-[#F59E0B] font-mono tracking-widest uppercase font-bold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-ping" />
+              RESTRICTED SUPER-ADMIN PORTAL
+            </span>
           </div>
-        </div>
+        </Link>
+      </div>
 
-        {/* High-Fidelity Login Card */}
-        <div className="glass-card rounded-2xl p-8 sm:p-10 border border-white/5 shadow-2xl relative overflow-hidden bg-navy-dark/40 backdrop-blur-xl">
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="flex items-start gap-3.5 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold leading-relaxed animate-shake">
-                <AlertCircle className="h-5 w-5 shrink-0 text-red-400 mt-0.5" />
-                <span>{error}</span>
+      {/* Main Container */}
+      <div className="relative z-10 w-full max-w-md mx-auto">
+        <TiltCard 
+          className="w-full rounded-[32px] p-[1.5px] bg-gradient-to-b from-[#F59E0B]/50 via-[#8B5CF6]/30 to-white/10 border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.95)] backdrop-blur-3xl relative overflow-hidden"
+        >
+          <div className="rounded-[30px] p-7 sm:p-10 bg-[#0F0818]/95 space-y-6 text-left relative">
+            
+            {/* STAGE 1: GATEKEEPER PASSCODE CHALLENGE */}
+            {!isUnlocked && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <h1 className="text-2xl font-black text-white tracking-tight font-display flex items-center gap-2">
+                      <LockKeyhole className="h-5 w-5 text-[#F59E0B]" />
+                      <span>Security Gatekeeper</span>
+                    </h1>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Enter admin security passcode to unlock portal
+                    </p>
+                  </div>
+                </div>
+
+                {gatekeeperError && (
+                  <div className="flex items-start gap-3 rounded-2xl p-4 bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium leading-relaxed animate-shake">
+                    <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5 text-red-400" />
+                    <span>{gatekeeperError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleGatekeeperSubmit} className="space-y-5">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                      Master Admin Gatekeeper Passcode
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#F59E0B] transition-colors">
+                        <Key className="h-4.5 w-4.5" />
+                      </div>
+                      <input
+                        type={showGatekeeperPass ? 'text' : 'password'}
+                        placeholder="Enter master passcode (e.g. HenilNeelProject)"
+                        value={gatekeeperPasscode}
+                        onChange={(e) => setGatekeeperPasscode(e.target.value)}
+                        className="w-full pl-11 pr-11 py-3.5 bg-white/[0.03] border border-white/10 rounded-2xl text-sm text-white placeholder-gray-500 focus:border-[#F59E0B] focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all font-mono"
+                        required
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowGatekeeperPass(!showGatekeeperPass)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {showGatekeeperPass ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">Master Passcode: <code className="text-[#F59E0B]">HenilNeelProject</code></p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 text-xs font-extrabold uppercase tracking-wider text-[#0A0610] bg-gradient-to-r from-[#F59E0B] via-[#D97706] to-[#EF4444] shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    <Unlock className="h-4 w-4" />
+                    <span>Unlock Admin Portal</span>
+                  </button>
+                </form>
+
+                <div className="pt-4 border-t border-white/10 text-center">
+                  <Link to="/login" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+                    ← Cancel & Return to User Login
+                  </Link>
+                </div>
               </div>
             )}
 
-            {/* Email Field with Glow effect */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
-                Administrator Username / Email
-              </label>
-              <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors">
-                  <Mail className="h-4.5 w-4.5" />
-                </span>
-                <input
-                  id="email"
-                  type="text"
-                  placeholder="admin1@cloudatlas.ai"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-white/[0.02] border border-white/5 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 focus:bg-white/[0.04] focus:ring-1 focus:ring-primary/20 transition-all font-medium"
-                  required
-                />
-              </div>
-            </div>
+            {/* STAGE 2: SUPER ADMIN LOGIN FORM (ONCE UNLOCKED) */}
+            {isUnlocked && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <h1 className="text-2xl font-black text-white tracking-tight font-display flex items-center gap-2">
+                      <span>Super Admin Sign In</span>
+                    </h1>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Authenticate your high-privilege credentials
+                    </p>
+                  </div>
 
-            {/* Password Field with Show/Hide toggle */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Security Passcode
-                </label>
-              </div>
-              <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors">
-                  <Lock className="h-4.5 w-4.5" />
-                </span>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3.5 bg-white/[0.02] border border-white/5 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 focus:bg-white/[0.04] focus:ring-1 focus:ring-primary/20 transition-all font-medium"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
-                </button>
-              </div>
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleQuickAdminFill}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 text-[#F59E0B] text-[10px] font-bold uppercase tracking-wider hover:bg-[#F59E0B]/25 transition-all cursor-pointer shadow-sm"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    <span>Admin Demo</span>
+                  </button>
+                </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-primary to-orange-600 text-sm font-semibold rounded-xl text-white hover:opacity-95 active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-primary/25 disabled:opacity-50"
-            >
-              {loading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <>
-                  Authenticate Identity
-                  <ArrowRight className="h-4.5 w-4.5" />
-                </>
-              )}
-            </button>
-          </form>
-        </div>
+                {error && (
+                  <div className="flex items-start gap-3 rounded-2xl p-4 bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium leading-relaxed animate-shake">
+                    <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5 text-red-400" />
+                    <span>{error}</span>
+                  </div>
+                )}
 
-        {/* Footer info */}
-        <p className="text-center text-xs text-gray-500 mt-8 font-medium">
-          Protected by end-to-end JWT encryption. Only authorized employees are allowed.
-        </p>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  
+                  {/* Admin Email Input */}
+                  <div>
+                    <label htmlFor="email" className="block text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                      Administrator Username / Email
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#F59E0B] transition-colors">
+                        <Mail className="h-4.5 w-4.5" />
+                      </div>
+                      <input
+                        id="email"
+                        type="text"
+                        placeholder="admin1@cloudatlas.ai"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-2xl text-sm text-white placeholder-gray-500 focus:border-[#F59E0B] focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Security Passcode Input */}
+                  <div>
+                    <label htmlFor="password" className="block text-[10px] font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                      Super Admin Security Passcode
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#F59E0B] transition-colors">
+                        <Lock className="h-4.5 w-4.5" />
+                      </div>
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-11 pr-11 py-3.5 bg-white/[0.03] border border-white/10 rounded-2xl text-sm text-white placeholder-gray-500 focus:border-[#F59E0B] focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/20 transition-all font-medium"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 text-xs font-extrabold uppercase tracking-wider text-[#0A0610] bg-gradient-to-r from-[#F59E0B] via-[#D97706] to-[#EF4444] shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#0A0610] border-t-transparent" />
+                    ) : (
+                      <>
+                        <span>Authenticate Identity</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+
+                </form>
+
+                {/* Lock Gatekeeper / Return links */}
+                <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-gray-400">
+                  <button
+                    type="button"
+                    onClick={handleLockPortal}
+                    className="text-xs text-gray-400 hover:text-red-400 transition-colors flex items-center gap-1"
+                  >
+                    <LockKeyhole className="h-3.5 w-3.5" />
+                    <span>Lock Gatekeeper</span>
+                  </button>
+                  <Link to="/login" className="font-bold text-[#8B5CF6] hover:underline flex items-center gap-1">
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>User Login</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </TiltCard>
       </div>
 
-      <style>{`
-        .grid-bg {
-          background-image: 
-            radial-gradient(at 50% 50%, rgba(10, 15, 30, 0.5), #060814),
-            linear-gradient(rgba(255, 255, 255, 0.007) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.007) 1px, transparent 1px);
-          background-size: 100% 100%, 30px 30px, 30px 30px;
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
-        }
-        .animate-shake {
-          animation: shake 0.2s ease-in-out 2;
-        }
-      `}</style>
     </div>
   );
 };

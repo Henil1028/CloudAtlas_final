@@ -1,0 +1,17 @@
+date,service,cost,region,usage_type,provider
+2026-07-01,Amazon EC2,145.20,us-east-1,c5.2xlarge compute hours,aws
+2026-07-01,Amazon RDS,89.50,us-east-1,db.r5.large multi-az,aws
+2026-07-01,Amazon S3,34.10,us-west-2,Standard storage GB-mo,aws
+2026-07-02,Amazon EC2,148.00,us-east-1,c5.2xlarge compute hours,aws
+2026-07-02,AWS Lambda,12.40,us-east-1,Execution duration request,aws
+2026-07-02,Amazon CloudFront,24.80,global,Outbound data egress,aws
+2026-07-03,Azure Virtual Machines,210.00,East US,D4s v3 VM Instance,azure
+2026-07-03,Azure SQL Database,115.50,East US 2,vCore General Purpose,azure
+2026-07-03,Azure Blob Storage,38.00,West US,Hot LRS Storage,azure
+2026-07-04,Google Compute Engine,198.00,us-central1,n2-standard-4 compute,gcp
+2026-07-04,Google BigQuery,142.50,us-multi,Analysis query scan GB,gcp
+2026-07-04,Google Cloud Storage,29.00,us-west1,Standard Regional Bucket,gcp
+2026-07-05,Amazon EC2,152.30,us-east-1,c5.2xlarge compute hours,aws
+2026-07-05,Amazon RDS,91.00,us-east-1,db.r5.large multi-az,aws
+2026-07-06,Azure Virtual Machines,215.00,East US,D4s v3 VM Instance,azure
+2026-07-06,Google Kubernetes Engine,68.00,us-central1,GKE Cluster Nodes,gcp

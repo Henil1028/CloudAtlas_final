@@ -1,0 +1,375 @@
+provider,date,service,region,usageType,cost,currency,accountId
+azure,2026-06-01,Virtual Machines,us-east-1,ComputeUsage,41.14,USD,112233445566
+gcp,2026-06-01,GKE,westeurope,DatabaseUnits,100.05,USD,112233445566
+gcp,2026-06-01,Cloud Storage,eu-west-1,NetworkEgress,21.14,USD,112233445566
+aws,2026-06-01,S3,us-central1,DataStorage,18.69,USD,554433221100
+azure,2026-06-01,Cosmos DB,eastus,ComputeUsage,27.04,USD,554433221100
+aws,2026-06-01,Lambda,us-east-1,DatabaseUnits,93.2,USD,112233445566
+azure,2026-06-01,Virtual Machines,westeurope,NetworkEgress,46.65,USD,112233445566
+aws,2026-06-02,ECS,us-central1,NetworkEgress,19.6,USD,112233445566
+gcp,2026-06-02,BigQuery,us-east-1,DatabaseUnits,56.53,USD,112233445566
+gcp,2026-06-02,Cloud Storage,us-east-1,NetworkEgress,72.33,USD,998877665544
+gcp,2026-06-02,Compute Engine,eu-west-1,NetworkEgress,108.62,USD,112233445566
+azure,2026-06-02,Azure SQL,eastus,ComputeUsage,81.44,USD,554433221100
+aws,2026-06-02,EC2,us-central1,APIRequest,47.55,USD,998877665544
+gcp,2026-06-02,Compute Engine,us-west-2,DatabaseUnits,99.45,USD,112233445566
+azure,2026-06-03,Blob Storage,us-east-1,DatabaseUnits,39.79,USD,554433221100
+gcp,2026-06-03,GKE,eastus,ComputeUsage,26.88,USD,554433221100
+azure,2026-06-03,AKS,us-west-2,APIRequest,86.27,USD,554433221100
+aws,2026-06-03,Lambda,us-west-2,DatabaseUnits,116.39,USD,554433221100
+aws,2026-06-03,EC2,us-central1,APIRequest,43.2,USD,554433221100
+azure,2026-06-03,Cosmos DB,us-central1,APIRequest,109.03,USD,554433221100
+azure,2026-06-03,Blob Storage,eastus,APIRequest,54.74,USD,998877665544
+gcp,2026-06-04,Cloud Storage,us-east-1,NetworkEgress,104.46,USD,112233445566
+azure,2026-06-04,Virtual Machines,westeurope,APIRequest,83.67,USD,112233445566
+gcp,2026-06-04,GKE,us-central1,NetworkEgress,87.93,USD,554433221100
+azure,2026-06-04,Cosmos DB,westeurope,ComputeUsage,113.26,USD,554433221100
+aws,2026-06-04,EC2,eastus,NetworkEgress,17.18,USD,554433221100
+aws,2026-06-05,ECS,us-west-2,NetworkEgress,46.72,USD,554433221100
+gcp,2026-06-05,GKE,us-central1,DataStorage,69.41,USD,998877665544
+aws,2026-06-05,ECS,us-central1,DatabaseUnits,84.43,USD,998877665544
+aws,2026-06-05,Lambda,us-east-1,DataStorage,119.7,USD,112233445566
+azure,2026-06-05,Azure SQL,eu-west-1,NetworkEgress,58.72,USD,554433221100
+azure,2026-06-05,Azure SQL,eu-west-1,DatabaseUnits,16.49,USD,554433221100
+gcp,2026-06-05,BigQuery,westeurope,DatabaseUnits,51.19,USD,112233445566
+aws,2026-06-05,DynamoDB,us-east-1,DataStorage,57.82,USD,998877665544
+aws,2026-06-06,S3,eastus,DataStorage,79.36,USD,112233445566
+gcp,2026-06-06,Cloud SQL,eastus,DatabaseUnits,57.66,USD,554433221100
+gcp,2026-06-06,GKE,us-east-1,DataStorage,102.23,USD,112233445566
+azure,2026-06-06,Blob Storage,eastus,DataStorage,109.39,USD,998877665544
+gcp,2026-06-06,GKE,us-east-1,NetworkEgress,44.57,USD,112233445566
+gcp,2026-06-07,Compute Engine,us-east-1,DataStorage,115.3,USD,998877665544
+azure,2026-06-07,Cosmos DB,eu-west-1,DatabaseUnits,75.67,USD,554433221100
+aws,2026-06-07,EC2,us-west-2,NetworkEgress,23.34,USD,554433221100
+azure,2026-06-07,AKS,us-central1,APIRequest,90.92,USD,554433221100
+aws,2026-06-07,DynamoDB,us-east-1,DatabaseUnits,98.46,USD,554433221100
+azure,2026-06-08,AKS,eastus,DatabaseUnits,59.08,USD,998877665544
+azure,2026-06-08,Virtual Machines,us-east-1,DatabaseUnits,96.31,USD,112233445566
+azure,2026-06-08,Blob Storage,us-east-1,DatabaseUnits,52.51,USD,112233445566
+gcp,2026-06-08,BigQuery,us-west-2,ComputeUsage,68.8,USD,998877665544
+azure,2026-06-08,Azure SQL,eu-west-1,NetworkEgress,67.69,USD,112233445566
+gcp,2026-06-09,GKE,eu-west-1,APIRequest,79.04,USD,554433221100
+aws,2026-06-09,ECS,westeurope,ComputeUsage,29.89,USD,112233445566
+aws,2026-06-09,ECS,westeurope,DataStorage,88.68,USD,554433221100
+azure,2026-06-09,AKS,eastus,DataStorage,107.26,USD,998877665544
+azure,2026-06-09,AKS,us-east-1,DataStorage,114.74,USD,112233445566
+aws,2026-06-09,S3,us-central1,DataStorage,98.51,USD,998877665544
+azure,2026-06-09,AKS,us-east-1,ComputeUsage,32.46,USD,554433221100
+azure,2026-06-09,Blob Storage,us-west-2,DatabaseUnits,75.69,USD,998877665544
+aws,2026-06-10,EC2,us-central1,ComputeUsage,57.31,USD,112233445566
+azure,2026-06-10,Cosmos DB,westeurope,DataStorage,83.68,USD,112233445566
+azure,2026-06-10,AKS,us-west-2,DatabaseUnits,101.84,USD,112233445566
+azure,2026-06-10,Cosmos DB,eastus,NetworkEgress,115.05,USD,112233445566
+aws,2026-06-10,DynamoDB,us-central1,NetworkEgress,65.59,USD,112233445566
+gcp,2026-06-11,BigQuery,us-central1,ComputeUsage,117.25,USD,112233445566
+azure,2026-06-11,Virtual Machines,eu-west-1,APIRequest,107.41,USD,998877665544
+aws,2026-06-11,S3,eu-west-1,ComputeUsage,71.1,USD,112233445566
+aws,2026-06-11,EC2,us-central1,ComputeUsage,60.56,USD,998877665544
+azure,2026-06-11,Blob Storage,eu-west-1,ComputeUsage,39.25,USD,554433221100
+gcp,2026-06-11,Cloud Storage,us-west-2,DataStorage,75.93,USD,998877665544
+gcp,2026-06-11,Compute Engine,eastus,DatabaseUnits,66.14,USD,554433221100
+gcp,2026-06-11,BigQuery,us-east-1,ComputeUsage,27.69,USD,554433221100
+aws,2026-06-12,ECS,us-west-2,DataStorage,79.37,USD,998877665544
+gcp,2026-06-12,Cloud SQL,eu-west-1,NetworkEgress,112.46,USD,112233445566
+azure,2026-06-12,AKS,eastus,ComputeUsage,106.8,USD,998877665544
+aws,2026-06-12,DynamoDB,us-west-2,ComputeUsage,49.91,USD,554433221100
+azure,2026-06-12,Virtual Machines,us-east-1,ComputeUsage,53.36,USD,554433221100
+gcp,2026-06-12,GKE,us-central1,DatabaseUnits,115.42,USD,554433221100
+aws,2026-06-12,S3,eastus,APIRequest,117.33,USD,554433221100
+gcp,2026-06-13,GKE,eu-west-1,DataStorage,33.54,USD,554433221100
+gcp,2026-06-13,Cloud SQL,eu-west-1,DatabaseUnits,108.86,USD,998877665544
+azure,2026-06-13,Blob Storage,us-west-2,DatabaseUnits,56.83,USD,112233445566
+azure,2026-06-13,AKS,eu-west-1,DatabaseUnits,76.05,USD,554433221100
+gcp,2026-06-13,BigQuery,us-west-2,NetworkEgress,113.16,USD,998877665544
+azure,2026-06-13,Virtual Machines,westeurope,NetworkEgress,97.91,USD,554433221100
+azure,2026-06-13,Azure SQL,us-east-1,NetworkEgress,111.75,USD,554433221100
+gcp,2026-06-14,Cloud SQL,eu-west-1,DatabaseUnits,44.61,USD,112233445566
+gcp,2026-06-14,BigQuery,us-central1,ComputeUsage,89.86,USD,554433221100
+azure,2026-06-14,AKS,us-central1,APIRequest,91.55,USD,112233445566
+aws,2026-06-14,EC2,eu-west-1,NetworkEgress,90.5,USD,112233445566
+azure,2026-06-14,Virtual Machines,eastus,DatabaseUnits,43.53,USD,998877665544
+azure,2026-06-14,Blob Storage,us-central1,APIRequest,69.52,USD,998877665544
+aws,2026-06-15,DynamoDB,us-east-1,DataStorage,81.79,USD,554433221100
+aws,2026-06-15,Lambda,eastus,NetworkEgress,100.37,USD,998877665544
+gcp,2026-06-15,Compute Engine,us-west-2,DatabaseUnits,62.14,USD,112233445566
+aws,2026-06-15,S3,eu-west-1,DatabaseUnits,54.31,USD,998877665544
+aws,2026-06-15,DynamoDB,eu-west-1,DatabaseUnits,72.4,USD,554433221100
+aws,2026-06-16,Lambda,westeurope,DataStorage,39.97,USD,998877665544
+aws,2026-06-16,ECS,us-central1,APIRequest,65.98,USD,112233445566
+azure,2026-06-16,Cosmos DB,westeurope,NetworkEgress,75.7,USD,998877665544
+azure,2026-06-16,AKS,eu-west-1,DatabaseUnits,54.21,USD,998877665544
+aws,2026-06-16,DynamoDB,eu-west-1,NetworkEgress,28.9,USD,112233445566
+azure,2026-06-16,AKS,us-east-1,DataStorage,67.84,USD,112233445566
+gcp,2026-06-16,BigQuery,us-central1,DatabaseUnits,63.0,USD,554433221100
+azure,2026-06-17,AKS,us-east-1,DatabaseUnits,98.05,USD,554433221100
+gcp,2026-06-17,Cloud Storage,us-east-1,ComputeUsage,37.86,USD,998877665544
+aws,2026-06-17,Lambda,us-west-2,NetworkEgress,76.8,USD,554433221100
+aws,2026-06-17,EC2,us-east-1,ComputeUsage,17.27,USD,112233445566
+aws,2026-06-17,EC2,us-west-2,ComputeUsage,33.0,USD,554433221100
+gcp,2026-06-18,Compute Engine,us-west-2,DatabaseUnits,72.73,USD,112233445566
+azure,2026-06-18,Cosmos DB,us-central1,DataStorage,56.69,USD,112233445566
+gcp,2026-06-18,GKE,us-east-1,ComputeUsage,49.43,USD,998877665544
+aws,2026-06-18,S3,westeurope,DataStorage,19.22,USD,112233445566
+azure,2026-06-18,Azure SQL,eastus,NetworkEgress,75.69,USD,554433221100
+gcp,2026-06-18,Compute Engine,us-central1,ComputeUsage,40.57,USD,554433221100
+azure,2026-06-18,Virtual Machines,us-central1,ComputeUsage,67.99,USD,554433221100
+azure,2026-06-19,Azure SQL,us-west-2,APIRequest,116.53,USD,998877665544
+aws,2026-06-19,ECS,us-east-1,DataStorage,97.14,USD,998877665544
+azure,2026-06-19,AKS,eastus,DatabaseUnits,52.08,USD,998877665544
+aws,2026-06-19,EC2,us-west-2,NetworkEgress,75.55,USD,554433221100
+aws,2026-06-19,DynamoDB,us-east-1,DataStorage,82.99,USD,554433221100
+aws,2026-06-20,ECS,eastus,DataStorage,79.08,USD,112233445566
+azure,2026-06-20,Azure SQL,westeurope,DatabaseUnits,53.89,USD,112233445566
+aws,2026-06-20,S3,eu-west-1,DataStorage,24.7,USD,554433221100
+gcp,2026-06-20,Cloud SQL,us-central1,DataStorage,19.89,USD,112233445566
+azure,2026-06-20,Virtual Machines,us-east-1,DataStorage,96.51,USD,112233445566
+aws,2026-06-21,S3,us-central1,ComputeUsage,94.06,USD,112233445566
+azure,2026-06-21,AKS,us-east-1,DatabaseUnits,53.56,USD,112233445566
+aws,2026-06-21,Lambda,us-east-1,DataStorage,15.43,USD,112233445566
+aws,2026-06-21,DynamoDB,us-central1,DatabaseUnits,32.19,USD,112233445566
+azure,2026-06-21,Blob Storage,eu-west-1,APIRequest,82.93,USD,998877665544
+azure,2026-06-21,Azure SQL,us-central1,DatabaseUnits,65.84,USD,554433221100
+azure,2026-06-21,Cosmos DB,eu-west-1,DataStorage,58.08,USD,112233445566
+gcp,2026-06-22,BigQuery,eastus,NetworkEgress,16.3,USD,998877665544
+gcp,2026-06-22,Cloud Storage,us-central1,DataStorage,38.51,USD,112233445566
+aws,2026-06-22,EC2,us-central1,APIRequest,34.41,USD,998877665544
+azure,2026-06-22,Cosmos DB,us-central1,DataStorage,51.0,USD,554433221100
+azure,2026-06-22,Azure SQL,us-central1,APIRequest,19.6,USD,998877665544
+azure,2026-06-22,Azure SQL,us-central1,APIRequest,86.84,USD,998877665544
+gcp,2026-06-22,Cloud SQL,us-west-2,DataStorage,43.51,USD,998877665544
+aws,2026-06-23,ECS,eu-west-1,APIRequest,24.12,USD,554433221100
+azure,2026-06-23,Blob Storage,us-east-1,DataStorage,43.51,USD,554433221100
+azure,2026-06-23,Cosmos DB,us-east-1,DataStorage,89.68,USD,554433221100
+gcp,2026-06-23,BigQuery,us-central1,ComputeUsage,107.21,USD,554433221100
+azure,2026-06-23,AKS,westeurope,NetworkEgress,102.26,USD,998877665544
+azure,2026-06-23,Blob Storage,westeurope,DatabaseUnits,101.89,USD,998877665544
+aws,2026-06-23,EC2,us-central1,NetworkEgress,80.47,USD,554433221100
+aws,2026-06-24,S3,us-west-2,DataStorage,72.05,USD,554433221100
+gcp,2026-06-24,Cloud Storage,us-central1,DatabaseUnits,90.16,USD,112233445566
+aws,2026-06-24,Lambda,us-central1,APIRequest,69.05,USD,112233445566
+azure,2026-06-24,Azure SQL,eu-west-1,DataStorage,40.12,USD,112233445566
+azure,2026-06-24,Virtual Machines,us-central1,NetworkEgress,38.75,USD,112233445566
+gcp,2026-06-24,Compute Engine,us-west-2,DatabaseUnits,91.7,USD,998877665544
+aws,2026-06-24,Lambda,eu-west-1,APIRequest,108.44,USD,112233445566
+azure,2026-06-24,Blob Storage,eu-west-1,NetworkEgress,108.98,USD,112233445566
+azure,2026-06-25,Virtual Machines,eastus,DatabaseUnits,30.52,USD,554433221100
+gcp,2026-06-25,Compute Engine,us-west-2,APIRequest,86.24,USD,112233445566
+azure,2026-06-25,Virtual Machines,us-central1,NetworkEgress,18.39,USD,554433221100
+aws,2026-06-25,ECS,us-west-2,APIRequest,75.32,USD,998877665544
+gcp,2026-06-25,GKE,us-central1,ComputeUsage,101.61,USD,112233445566
+gcp,2026-06-25,Cloud SQL,eu-west-1,NetworkEgress,99.48,USD,112233445566
+azure,2026-06-26,Blob Storage,us-west-2,APIRequest,67.89,USD,554433221100
+gcp,2026-06-26,Cloud SQL,eastus,APIRequest,52.37,USD,112233445566
+azure,2026-06-26,Azure SQL,eastus,ComputeUsage,112.96,USD,998877665544
+gcp,2026-06-26,BigQuery,westeurope,DatabaseUnits,72.94,USD,112233445566
+azure,2026-06-26,AKS,us-west-2,ComputeUsage,23.0,USD,998877665544
+gcp,2026-06-27,Cloud SQL,eastus,DatabaseUnits,67.62,USD,554433221100
+gcp,2026-06-27,Cloud Storage,westeurope,ComputeUsage,71.14,USD,998877665544
+aws,2026-06-27,DynamoDB,westeurope,APIRequest,80.97,USD,112233445566
+azure,2026-06-27,Cosmos DB,us-central1,NetworkEgress,58.96,USD,998877665544
+azure,2026-06-27,Blob Storage,westeurope,NetworkEgress,90.81,USD,554433221100
+gcp,2026-06-27,GKE,eastus,DatabaseUnits,116.51,USD,554433221100
+aws,2026-06-27,ECS,us-central1,ComputeUsage,74.5,USD,554433221100
+aws,2026-06-28,S3,westeurope,ComputeUsage,31.42,USD,554433221100
+aws,2026-06-28,ECS,eu-west-1,DataStorage,107.17,USD,998877665544
+aws,2026-06-28,S3,us-west-2,APIRequest,69.09,USD,112233445566
+gcp,2026-06-28,GKE,eastus,DataStorage,94.68,USD,554433221100
+gcp,2026-06-28,Compute Engine,us-east-1,APIRequest,117.18,USD,112233445566
+azure,2026-06-28,AKS,westeurope,NetworkEgress,30.61,USD,998877665544
+azure,2026-06-28,Blob Storage,eastus,NetworkEgress,70.87,USD,112233445566
+aws,2026-06-28,EC2,eastus,APIRequest,26.92,USD,998877665544
+gcp,2026-06-29,Compute Engine,eastus,APIRequest,102.58,USD,998877665544
+gcp,2026-06-29,Cloud SQL,eastus,DataStorage,47.67,USD,998877665544
+gcp,2026-06-29,Compute Engine,westeurope,DataStorage,27.33,USD,554433221100
+aws,2026-06-29,ECS,us-east-1,APIRequest,96.93,USD,112233445566
+azure,2026-06-29,AKS,eu-west-1,NetworkEgress,95.47,USD,554433221100
+azure,2026-06-29,Virtual Machines,eu-west-1,APIRequest,66.91,USD,112233445566
+aws,2026-06-29,ECS,us-central1,ComputeUsage,38.0,USD,112233445566
+azure,2026-06-30,Virtual Machines,eu-west-1,NetworkEgress,47.67,USD,998877665544
+gcp,2026-06-30,Cloud Storage,us-central1,DataStorage,66.44,USD,554433221100
+gcp,2026-06-30,Cloud SQL,us-east-1,APIRequest,84.72,USD,554433221100
+aws,2026-06-30,DynamoDB,westeurope,NetworkEgress,20.48,USD,112233445566
+azure,2026-06-30,Virtual Machines,us-central1,APIRequest,93.84,USD,112233445566
+azure,2026-07-01,Blob Storage,eu-west-1,NetworkEgress,104.24,USD,112233445566
+aws,2026-07-01,EC2,us-central1,NetworkEgress,62.35,USD,112233445566
+gcp,2026-07-01,BigQuery,eu-west-1,APIRequest,59.97,USD,554433221100
+aws,2026-07-01,Lambda,us-west-2,ComputeUsage,22.6,USD,998877665544
+aws,2026-07-01,EC2,us-west-2,NetworkEgress,93.48,USD,112233445566
+azure,2026-07-02,Azure SQL,westeurope,ComputeUsage,65.33,USD,112233445566
+azure,2026-07-02,Cosmos DB,us-central1,DataStorage,51.86,USD,998877665544
+azure,2026-07-02,Blob Storage,westeurope,DatabaseUnits,111.46,USD,998877665544
+azure,2026-07-02,Azure SQL,us-east-1,DataStorage,97.84,USD,112233445566
+gcp,2026-07-02,Cloud SQL,us-west-2,APIRequest,66.21,USD,998877665544
+azure,2026-07-02,Virtual Machines,eastus,DataStorage,35.82,USD,998877665544
+aws,2026-07-02,Lambda,us-east-1,NetworkEgress,29.87,USD,998877665544
+azure,2026-07-03,Cosmos DB,eu-west-1,NetworkEgress,55.75,USD,998877665544
+aws,2026-07-03,DynamoDB,eastus,DataStorage,63.0,USD,998877665544
+gcp,2026-07-03,Cloud Storage,eu-west-1,ComputeUsage,65.44,USD,554433221100
+azure,2026-07-03,AKS,eastus,ComputeUsage,46.55,USD,112233445566
+aws,2026-07-03,DynamoDB,westeurope,NetworkEgress,91.26,USD,998877665544
+aws,2026-07-03,DynamoDB,us-east-1,NetworkEgress,86.87,USD,998877665544
+aws,2026-07-03,EC2,westeurope,ComputeUsage,30.99,USD,112233445566
+azure,2026-07-03,Blob Storage,us-west-2,NetworkEgress,73.65,USD,554433221100
+azure,2026-07-04,Virtual Machines,westeurope,APIRequest,63.03,USD,112233445566
+azure,2026-07-04,Virtual Machines,westeurope,ComputeUsage,66.99,USD,998877665544
+gcp,2026-07-04,BigQuery,us-west-2,DatabaseUnits,37.05,USD,998877665544
+aws,2026-07-04,Lambda,us-central1,APIRequest,16.32,USD,998877665544
+gcp,2026-07-04,Cloud Storage,westeurope,APIRequest,104.07,USD,112233445566
+aws,2026-07-04,S3,westeurope,DatabaseUnits,83.51,USD,554433221100
+aws,2026-07-04,EC2,us-central1,DataStorage,86.94,USD,112233445566
+aws,2026-07-05,Lambda,us-central1,NetworkEgress,20.78,USD,554433221100
+gcp,2026-07-05,Compute Engine,us-east-1,NetworkEgress,85.79,USD,554433221100
+azure,2026-07-05,Virtual Machines,us-central1,DataStorage,100.38,USD,554433221100
+gcp,2026-07-05,GKE,eastus,DataStorage,67.75,USD,998877665544
+aws,2026-07-05,S3,eastus,NetworkEgress,57.8,USD,112233445566
+azure,2026-07-05,Azure SQL,us-east-1,DataStorage,63.99,USD,554433221100
+gcp,2026-07-05,Cloud SQL,us-west-2,APIRequest,82.27,USD,112233445566
+gcp,2026-07-05,Compute Engine,westeurope,DatabaseUnits,92.92,USD,554433221100
+aws,2026-07-06,Lambda,westeurope,DataStorage,70.7,USD,112233445566
+aws,2026-07-06,EC2,us-east-1,DataStorage,55.31,USD,554433221100
+azure,2026-07-06,AKS,eastus,APIRequest,101.45,USD,998877665544
+azure,2026-07-06,Azure SQL,us-west-2,ComputeUsage,31.62,USD,112233445566
+aws,2026-07-06,S3,us-west-2,APIRequest,27.69,USD,554433221100
+gcp,2026-07-06,Cloud Storage,westeurope,DatabaseUnits,50.71,USD,112233445566
+aws,2026-07-06,Lambda,eastus,APIRequest,112.46,USD,554433221100
+azure,2026-07-06,Cosmos DB,eastus,NetworkEgress,99.18,USD,998877665544
+gcp,2026-07-07,GKE,eu-west-1,APIRequest,110.41,USD,554433221100
+azure,2026-07-07,Virtual Machines,us-east-1,DatabaseUnits,24.95,USD,112233445566
+aws,2026-07-07,DynamoDB,us-central1,APIRequest,28.4,USD,554433221100
+gcp,2026-07-07,BigQuery,eu-west-1,NetworkEgress,19.95,USD,998877665544
+azure,2026-07-07,Cosmos DB,us-central1,DatabaseUnits,25.28,USD,554433221100
+azure,2026-07-08,Blob Storage,eastus,DataStorage,44.6,USD,554433221100
+aws,2026-07-08,S3,eu-west-1,APIRequest,22.75,USD,998877665544
+azure,2026-07-08,Azure SQL,us-east-1,DatabaseUnits,50.25,USD,998877665544
+gcp,2026-07-08,Cloud SQL,us-west-2,DataStorage,106.35,USD,554433221100
+azure,2026-07-08,AKS,eu-west-1,ComputeUsage,73.56,USD,554433221100
+azure,2026-07-08,Azure SQL,eastus,DataStorage,53.67,USD,112233445566
+aws,2026-07-09,ECS,westeurope,NetworkEgress,96.46,USD,112233445566
+aws,2026-07-09,DynamoDB,us-central1,DataStorage,67.54,USD,112233445566
+aws,2026-07-09,ECS,us-west-2,DataStorage,23.24,USD,998877665544
+aws,2026-07-09,Lambda,us-east-1,DataStorage,65.81,USD,112233445566
+azure,2026-07-09,AKS,us-central1,ComputeUsage,44.69,USD,998877665544
+gcp,2026-07-10,Cloud Storage,eu-west-1,NetworkEgress,70.22,USD,554433221100
+aws,2026-07-10,DynamoDB,westeurope,APIRequest,21.97,USD,554433221100
+gcp,2026-07-10,GKE,us-central1,ComputeUsage,34.06,USD,112233445566
+gcp,2026-07-10,Compute Engine,us-east-1,ComputeUsage,44.36,USD,112233445566
+gcp,2026-07-10,BigQuery,eu-west-1,APIRequest,15.24,USD,554433221100
+aws,2026-07-10,EC2,westeurope,APIRequest,49.3,USD,998877665544
+azure,2026-07-10,Virtual Machines,eastus,APIRequest,114.6,USD,112233445566
+azure,2026-07-11,Virtual Machines,us-west-2,DataStorage,15.72,USD,554433221100
+gcp,2026-07-11,Cloud Storage,us-east-1,ComputeUsage,84.83,USD,554433221100
+azure,2026-07-11,Virtual Machines,us-east-1,ComputeUsage,46.99,USD,112233445566
+azure,2026-07-11,AKS,westeurope,APIRequest,76.06,USD,998877665544
+aws,2026-07-11,DynamoDB,westeurope,DataStorage,31.69,USD,554433221100
+aws,2026-07-11,Lambda,eastus,DataStorage,78.43,USD,112233445566
+gcp,2026-07-12,Compute Engine,eu-west-1,NetworkEgress,53.02,USD,998877665544
+aws,2026-07-12,EC2,us-west-2,NetworkEgress,67.9,USD,112233445566
+azure,2026-07-12,Cosmos DB,us-west-2,DatabaseUnits,21.82,USD,554433221100
+azure,2026-07-12,Azure SQL,us-west-2,ComputeUsage,94.66,USD,998877665544
+aws,2026-07-12,EC2,us-east-1,NetworkEgress,38.99,USD,554433221100
+gcp,2026-07-12,Cloud Storage,us-east-1,ComputeUsage,119.21,USD,112233445566
+aws,2026-07-13,S3,us-east-1,NetworkEgress,85.78,USD,112233445566
+aws,2026-07-13,S3,us-west-2,NetworkEgress,80.89,USD,112233445566
+gcp,2026-07-13,GKE,westeurope,DatabaseUnits,73.12,USD,998877665544
+aws,2026-07-13,Lambda,us-east-1,APIRequest,69.38,USD,998877665544
+azure,2026-07-13,Azure SQL,eastus,NetworkEgress,105.48,USD,998877665544
+azure,2026-07-14,AKS,eu-west-1,ComputeUsage,71.99,USD,112233445566
+azure,2026-07-14,Virtual Machines,us-central1,ComputeUsage,86.65,USD,554433221100
+azure,2026-07-14,Cosmos DB,us-west-2,DataStorage,89.76,USD,112233445566
+aws,2026-07-14,Lambda,us-central1,DatabaseUnits,111.72,USD,112233445566
+aws,2026-07-14,S3,us-west-2,DataStorage,24.29,USD,998877665544
+aws,2026-07-14,Lambda,westeurope,NetworkEgress,82.7,USD,554433221100
+gcp,2026-07-14,Compute Engine,us-east-1,APIRequest,17.08,USD,554433221100
+azure,2026-07-15,Azure SQL,us-east-1,NetworkEgress,62.16,USD,112233445566
+gcp,2026-07-15,Cloud SQL,us-west-2,DataStorage,15.76,USD,998877665544
+azure,2026-07-15,Blob Storage,us-east-1,NetworkEgress,90.17,USD,112233445566
+azure,2026-07-15,Virtual Machines,eu-west-1,NetworkEgress,28.63,USD,112233445566
+gcp,2026-07-15,Compute Engine,westeurope,DatabaseUnits,64.15,USD,554433221100
+gcp,2026-07-16,BigQuery,eastus,NetworkEgress,17.23,USD,554433221100
+azure,2026-07-16,Cosmos DB,eastus,NetworkEgress,55.96,USD,554433221100
+gcp,2026-07-16,Compute Engine,us-central1,APIRequest,71.98,USD,554433221100
+gcp,2026-07-16,Cloud SQL,us-central1,DataStorage,66.88,USD,554433221100
+gcp,2026-07-16,Compute Engine,eastus,NetworkEgress,32.06,USD,998877665544
+azure,2026-07-16,Cosmos DB,us-central1,APIRequest,53.73,USD,112233445566
+azure,2026-07-16,Virtual Machines,eastus,NetworkEgress,108.48,USD,554433221100
+gcp,2026-07-17,Cloud Storage,us-west-2,APIRequest,38.58,USD,998877665544
+gcp,2026-07-17,BigQuery,eu-west-1,DataStorage,15.4,USD,554433221100
+aws,2026-07-17,EC2,westeurope,DatabaseUnits,101.24,USD,554433221100
+azure,2026-07-17,Azure SQL,eastus,ComputeUsage,67.23,USD,112233445566
+aws,2026-07-17,EC2,eastus,APIRequest,42.18,USD,112233445566
+gcp,2026-07-18,Cloud Storage,westeurope,DataStorage,72.63,USD,998877665544
+gcp,2026-07-18,BigQuery,eastus,APIRequest,51.62,USD,112233445566
+azure,2026-07-18,Azure SQL,us-west-2,NetworkEgress,47.53,USD,554433221100
+azure,2026-07-18,Cosmos DB,us-east-1,APIRequest,18.27,USD,998877665544
+gcp,2026-07-18,Compute Engine,us-central1,APIRequest,55.28,USD,554433221100
+gcp,2026-07-18,BigQuery,us-west-2,NetworkEgress,66.46,USD,112233445566
+aws,2026-07-18,Lambda,us-west-2,DatabaseUnits,27.71,USD,998877665544
+gcp,2026-07-19,Compute Engine,westeurope,DataStorage,37.51,USD,554433221100
+gcp,2026-07-19,GKE,us-central1,DataStorage,34.25,USD,112233445566
+gcp,2026-07-19,BigQuery,eu-west-1,DataStorage,117.11,USD,112233445566
+azure,2026-07-19,Blob Storage,us-east-1,ComputeUsage,75.87,USD,998877665544
+azure,2026-07-19,Azure SQL,us-west-2,APIRequest,91.52,USD,998877665544
+aws,2026-07-20,ECS,eu-west-1,NetworkEgress,109.91,USD,112233445566
+aws,2026-07-20,EC2,westeurope,DatabaseUnits,73.85,USD,112233445566
+aws,2026-07-20,S3,us-west-2,NetworkEgress,73.23,USD,998877665544
+gcp,2026-07-20,GKE,eastus,APIRequest,116.89,USD,112233445566
+azure,2026-07-20,Azure SQL,eu-west-1,APIRequest,80.35,USD,112233445566
+azure,2026-07-21,Cosmos DB,us-central1,DataStorage,35.59,USD,998877665544
+gcp,2026-07-21,Compute Engine,eu-west-1,DatabaseUnits,77.53,USD,554433221100
+aws,2026-07-21,Lambda,us-east-1,NetworkEgress,17.87,USD,554433221100
+gcp,2026-07-21,GKE,us-west-2,APIRequest,26.05,USD,554433221100
+azure,2026-07-21,Blob Storage,us-east-1,DataStorage,113.75,USD,554433221100
+gcp,2026-07-22,GKE,us-central1,DataStorage,79.61,USD,998877665544
+gcp,2026-07-22,Cloud SQL,us-central1,ComputeUsage,117.83,USD,112233445566
+gcp,2026-07-22,BigQuery,eu-west-1,NetworkEgress,115.17,USD,998877665544
+aws,2026-07-22,EC2,us-west-2,APIRequest,78.54,USD,998877665544
+gcp,2026-07-22,Cloud Storage,westeurope,APIRequest,19.94,USD,554433221100
+azure,2026-07-23,Blob Storage,eastus,APIRequest,92.43,USD,998877665544
+azure,2026-07-23,AKS,eastus,APIRequest,35.85,USD,998877665544
+azure,2026-07-23,Azure SQL,us-west-2,NetworkEgress,78.15,USD,998877665544
+gcp,2026-07-23,Cloud Storage,eastus,NetworkEgress,41.59,USD,112233445566
+gcp,2026-07-23,Compute Engine,eastus,APIRequest,90.11,USD,112233445566
+azure,2026-07-23,AKS,westeurope,NetworkEgress,74.7,USD,998877665544
+aws,2026-07-23,ECS,westeurope,DatabaseUnits,102.7,USD,554433221100
+aws,2026-07-24,S3,eastus,DataStorage,21.78,USD,554433221100
+azure,2026-07-24,Azure SQL,eastus,DataStorage,31.03,USD,998877665544
+gcp,2026-07-24,BigQuery,eu-west-1,APIRequest,75.95,USD,554433221100
+aws,2026-07-24,EC2,us-east-1,NetworkEgress,20.44,USD,554433221100
+gcp,2026-07-24,Cloud Storage,us-central1,DataStorage,73.57,USD,998877665544
+gcp,2026-07-24,Cloud Storage,us-west-2,DataStorage,82.93,USD,998877665544
+azure,2026-07-24,Cosmos DB,eu-west-1,DataStorage,119.01,USD,998877665544
+azure,2026-07-24,Azure SQL,westeurope,APIRequest,110.76,USD,112233445566
+azure,2026-07-25,Blob Storage,eu-west-1,DataStorage,38.8,USD,112233445566
+aws,2026-07-25,S3,westeurope,DatabaseUnits,59.1,USD,112233445566
+aws,2026-07-25,Lambda,westeurope,DatabaseUnits,99.2,USD,554433221100
+aws,2026-07-25,S3,us-east-1,DatabaseUnits,32.84,USD,554433221100
+gcp,2026-07-25,GKE,us-west-2,DatabaseUnits,86.04,USD,998877665544
+azure,2026-07-26,Virtual Machines,us-central1,ComputeUsage,18.34,USD,998877665544
+azure,2026-07-26,Azure SQL,us-east-1,ComputeUsage,49.74,USD,998877665544
+aws,2026-07-26,DynamoDB,westeurope,APIRequest,37.95,USD,998877665544
+gcp,2026-07-26,GKE,eastus,APIRequest,64.81,USD,112233445566
+azure,2026-07-26,Blob Storage,us-central1,DatabaseUnits,15.81,USD,112233445566
+aws,2026-07-26,DynamoDB,us-west-2,DatabaseUnits,53.4,USD,998877665544
+gcp,2026-07-27,Compute Engine,us-west-2,DataStorage,112.76,USD,998877665544
+aws,2026-07-27,Lambda,us-east-1,DatabaseUnits,36.34,USD,554433221100
+azure,2026-07-27,Cosmos DB,us-central1,APIRequest,113.96,USD,112233445566
+gcp,2026-07-27,Cloud SQL,us-east-1,DataStorage,98.47,USD,112233445566
+aws,2026-07-27,EC2,us-east-1,NetworkEgress,107.52,USD,998877665544
+aws,2026-07-27,Lambda,us-west-2,DatabaseUnits,17.46,USD,112233445566
+aws,2026-07-28,S3,westeurope,APIRequest,38.56,USD,998877665544
+gcp,2026-07-28,Cloud SQL,westeurope,APIRequest,68.63,USD,998877665544
+aws,2026-07-28,Lambda,eastus,APIRequest,102.61,USD,554433221100
+azure,2026-07-28,AKS,westeurope,ComputeUsage,79.82,USD,554433221100
+azure,2026-07-28,Cosmos DB,us-east-1,DatabaseUnits,86.34,USD,554433221100
+aws,2026-07-29,DynamoDB,eastus,DataStorage,41.41,USD,112233445566
+gcp,2026-07-29,GKE,eu-west-1,NetworkEgress,27.28,USD,998877665544
+gcp,2026-07-29,Compute Engine,westeurope,DatabaseUnits,113.62,USD,112233445566
+azure,2026-07-29,Virtual Machines,westeurope,APIRequest,76.91,USD,554433221100
+gcp,2026-07-29,Cloud Storage,eu-west-1,DatabaseUnits,69.48,USD,998877665544
+gcp,2026-07-29,BigQuery,us-west-2,DatabaseUnits,34.68,USD,112233445566
+azure,2026-07-29,Azure SQL,eastus,DatabaseUnits,30.86,USD,998877665544
+aws,2026-07-30,S3,us-central1,DatabaseUnits,88.9,USD,998877665544
+aws,2026-07-30,S3,eastus,DataStorage,54.47,USD,998877665544
+azure,2026-07-30,Cosmos DB,us-central1,DatabaseUnits,25.32,USD,112233445566
+aws,2026-07-30,EC2,us-west-2,DataStorage,62.01,USD,998877665544
+aws,2026-07-30,S3,us-central1,ComputeUsage,18.39,USD,554433221100
