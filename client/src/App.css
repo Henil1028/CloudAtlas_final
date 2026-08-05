@@ -219,21 +219,21 @@
 
 /* Warm Editorial / Organic Luxury Theme Overrides */
 .warm-editorial-theme {
-  background-color: #F5F0E8 !important;
-  color: #2C1810 !important;
-  --color-primary: #B47850;
-  --color-primary-hover: #8C5A3C;
-  --color-navy-dark: #F5F0E8;
-  --color-navy-deep: #E8D5C0;
-  --color-navy-light: #DFD5C6;
-  --color-navy-surface: #E8D5C0;
-  --color-navy-border: rgba(44, 24, 16, 0.12);
-  --color-gold: #2C1810;
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-navy-dark: #F8FAFC;
+  --color-navy-deep: #F1F5F9;
+  --color-navy-light: #E2E8F0;
+  --color-navy-surface: #FFFFFF;
+  --color-navy-border: rgba(15, 23, 42, 0.1);
+  --color-gold: #0F172A;
 }
 
 .warm-editorial-theme::selection {
-  background-color: #B47850 !important;
-  color: #F5F0E8 !important;
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
 }
 
 .warm-editorial-theme .text-white,
@@ -243,17 +243,20 @@
 .warm-editorial-theme h4,
 .warm-editorial-theme h5,
 .warm-editorial-theme h6 {
-  color: #2C1810 !important;
+  color: #0F172A !important;
 }
 
 .warm-editorial-theme .text-gray-200,
 .warm-editorial-theme .text-gray-300,
 .warm-editorial-theme .text-gray-400,
 .warm-editorial-theme .text-gray-500,
+.warm-editorial-theme .text-slate-200,
+.warm-editorial-theme .text-slate-300,
+.warm-editorial-theme .text-slate-400,
 .warm-editorial-theme p,
 .warm-editorial-theme label,
 .warm-editorial-theme span:not(.text-primary) {
-  color: #5C483D !important;
+  color: #334155 !important;
 }
 
 .warm-editorial-theme .text-primary {

@@ -265,73 +265,7 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
           <span className="hidden sm:inline">Upload CSV</span>
         </button>
 
-        {/* Notifications */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => { setShowNotifs(!showNotifs); setShowProfile(false); }}
-            style={{
-              width: '36px', height: '36px', borderRadius: '8px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-              color: '#94A3B8', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              position: 'relative', transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-              e.currentTarget.style.color = '#F1F5F9';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-              e.currentTarget.style.color = '#94A3B8';
-            }}
-          >
-            <Bell size={15} />
-            <span style={{
-              position: 'absolute', top: '6px', right: '6px',
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: '#EF4444', border: '1.5px solid #050816',
-              boxShadow: '0 0 6px rgba(239,68,68,0.6)',
-            }} />
-          </button>
 
-          {showNotifs && (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowNotifs(false)} />
-              <div className="animate-modal-enter" style={{
-                position: 'absolute', top: '44px', right: 0,
-                width: '320px', zIndex: 50,
-                background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '14px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                overflow: 'hidden',
-              }}>
-                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '13px', color: '#F1F5F9' }}>Notifications</span>
-                  <span style={{ fontSize: '11px', color: '#7C3AED', fontWeight: 600, cursor: 'pointer' }}>Mark all read</span>
-                </div>
-                {MOCK_NOTIFICATIONS.map(n => (
-                  <div key={n.id} style={{
-                    display: 'flex', gap: '10px', padding: '12px 16px',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    cursor: 'pointer', transition: 'background 0.15s',
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <div style={{
-                      width: '8px', height: '8px', borderRadius: '50%',
-                      background: n.color, flexShrink: 0, marginTop: '4px',
-                      boxShadow: `0 0 6px ${n.color}80`,
-                    }} />
-                    <div>
-                      <p style={{ margin: 0, fontSize: '12.5px', color: '#CBD5E1', lineHeight: 1.4 }}>{n.text}</p>
-                      <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#475569' }}>{n.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
 
         {/* Dark mode toggle */}
         <button
