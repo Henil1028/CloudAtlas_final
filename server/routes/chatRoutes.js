@@ -4,8 +4,15 @@ const { protect } = require('../middleware/authMiddleware');
 const BillingData = require('../models/BillingData');
 const axios = require('axios');
 
-// All chat routes are protected
-router.use(protect);
+const optionalAuth = (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    return protect(req, res, next);
+  }
+  next();
+};
+
+// Optional auth for instant AI responses
+router.use(optionalAuth);
 
 // --- Ultra-Fast Helper Functions (Single DB Fetch) ---
 

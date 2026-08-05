@@ -149,6 +149,7 @@ export const UploadPage = () => {
       setProgress(100);
       setSuccess(true);
       setInsertedCount(response.data.recordsInserted);
+      localStorage.setItem('cloudatlas_active_provider', provider);
       setFile(null);
 
       const newFileId = response.data.file?._id;
@@ -253,27 +254,28 @@ export const UploadPage = () => {
 
               <form onSubmit={handleUploadSubmit} className="space-y-6">
                 
-                {/* Provider Selector */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-3">
-                    Cloud Infrastructure Provider
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['aws', 'azure', 'gcp'].map((p) => (
-                      <button
-                        type="button"
-                        key={p}
-                        onClick={() => setProvider(p)}
-                        className={`py-3.5 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                          provider === p
-                            ? 'bg-[#06B6D4]/10 border-[#06B6D4] text-[#06B6D4] shadow-lg shadow-[#06B6D4]/10'
-                            : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
+                {/* AI Auto-Detected Provider Status */}
+                <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/20 p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-400">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">AI Auto Provider Detection Engine</h4>
+                      <p className="text-xs text-gray-300 mt-0.5">
+                        {file ? (
+                          <>Detected Cloud Provider: <span className="font-extrabold text-white uppercase px-2 py-0.5 bg-cyan-500/20 rounded border border-cyan-500/30">{provider}</span></>
+                        ) : (
+                          'Provider will be automatically fetched & classified from your CSV dataset headers.'
+                        )}
+                      </p>
+                    </div>
                   </div>
+                  {file && (
+                    <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                      <CheckCircle className="h-3 w-3" /> Auto-Fetched
+                    </span>
+                  )}
                 </div>
 
                 {/* Drag and Drop Zone */}
