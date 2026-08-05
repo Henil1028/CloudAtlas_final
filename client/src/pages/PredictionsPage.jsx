@@ -259,7 +259,7 @@ export const PredictionsPage = () => {
         if (summary.providerSpend) {
           const pKey = form.provider.toLowerCase();
           const pSpend = summary.providerSpend[pKey] || 0;
-          const totalProvSpend = (summary.providerSpend.aws || 0) + (summary.providerSpend.azure || 0) + (summary.providerSpend.gcp || 0);
+          const totalProvSpend = Object.values(summary.providerSpend).reduce((s, v) => s + (v || 0), 0);
           if (totalProvSpend > 0) {
             filterMultiplier *= (pSpend / totalProvSpend);
           }
@@ -422,7 +422,11 @@ export const PredictionsPage = () => {
 
     const daily = [...dataSummary.dailySpend].sort((a, b) => new Date(a.date) - new Date(b.date));
     const topService = dataSummary.serviceSpend?.[0]?.service || 'EC2';
-    const providerName = (dataSummary.providerSpend?.aws > 0 ? 'AWS' : dataSummary.providerSpend?.azure > 0 ? 'Azure' : 'Cloud').toUpperCase();
+    const providerName = (() => {
+      const ps = dataSummary.providerSpend || {};
+      const entries = Object.entries(ps).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+      return entries.length > 0 ? entries[0][0].toUpperCase() : 'CLOUD';
+    })();
 
     let maxSpikePct = 0;
     let maxSpikeDate = daily[daily.length - 1]?.date || 'Today';
@@ -473,7 +477,11 @@ export const PredictionsPage = () => {
     }
 
     const topServices = dataSummary.serviceSpend.slice(0, 3);
-    const provider = (dataSummary.providerSpend?.aws > 0 ? 'AWS' : dataSummary.providerSpend?.azure > 0 ? 'Azure' : 'Cloud').toUpperCase();
+    const provider = (() => {
+      const ps = dataSummary.providerSpend || {};
+      const entries = Object.entries(ps).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+      return entries.length > 0 ? entries[0][0].toUpperCase() : 'CLOUD';
+    })();
 
     const actions = [
       { obs: 'High peak-to-average cost ratio detected', action: 'Downgrade unutilized nodes during off-peak hours', priority: 'High', color: '#EF4444', pct: 0.08 },

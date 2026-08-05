@@ -79,7 +79,7 @@ export const DashboardPage = () => {
   const isInitialLoad = React.useRef(true);
   const [summary, setSummary] = useState({
     totalCost: 0, averageCost: 0, totalRecords: 0,
-    providerSpend: { aws: 0, azure: 0, gcp: 0 },
+    providerSpend: {},
     serviceSpend: [], dailySpend: [], monthlySpend: [],
     topExpensiveServices: [],
   });
@@ -175,8 +175,9 @@ export const DashboardPage = () => {
 
     // 1. Provider Lock-in Risk (0-100)
     const spend = summary.providerSpend || {};
-    const pTotal = (spend.aws || 0) + (spend.azure || 0) + (spend.gcp || 0) || totalCost;
-    const maxProviderShare = Math.max((spend.aws || 0) / pTotal, (spend.azure || 0) / pTotal, (spend.gcp || 0) / pTotal);
+    const spendValues = Object.values(spend).filter(v => v > 0);
+    const pTotal = spendValues.reduce((s, v) => s + v, 0) || totalCost;
+    const maxProviderShare = spendValues.length > 0 ? Math.max(...spendValues) / pTotal : 0;
     const providerRisk = Math.round(maxProviderShare * 75);
 
     // 2. Service Concentration Risk (Herfindahl-Hirschman Index 0-100)
@@ -298,11 +299,21 @@ export const DashboardPage = () => {
     return [];
   }, [hasData, period, trendsData, summary]);
 
-  const chartProviders = [
-    { name: 'AWS', cost: summary.providerSpend.aws || 0, color: '#22C55E' },
-    { name: 'Azure', cost: summary.providerSpend.azure || 0, color: '#3B82F6' },
-    { name: 'GCP', cost: summary.providerSpend.gcp || 0, color: '#8B5CF6' },
-  ];
+  // Dynamic provider color palette
+  const PROVIDER_COLORS = {
+    aws: '#FF9900', azure: '#0078D4', gcp: '#4285F4', digitalocean: '#0080FF',
+    oracle: '#F80000', ibm: '#0F62FE', alibaba: '#FF6A00', linode: '#00B050',
+    other: '#8B5CF6',
+  };
+  const FALLBACK_COLORS = ['#22C55E', '#06B6D4', '#EC4899', '#F59E0B', '#EF4444', '#14B8A6'];
+  const chartProviders = Object.entries(summary.providerSpend || {})
+    .filter(([, cost]) => cost > 0)
+    .map(([key, cost], idx) => ({
+      name: key.toUpperCase(),
+      cost,
+      color: PROVIDER_COLORS[key] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length],
+    }))
+    .sort((a, b) => b.cost - a.cost);
 
   const chartTrend = useMemo(() => {
     if (!hasData) return [];

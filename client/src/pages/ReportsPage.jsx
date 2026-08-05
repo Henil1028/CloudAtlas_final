@@ -317,11 +317,21 @@ export const ReportsPage = () => {
     if (!dataSummary || !dataSummary.dailySpend || dataSummary.dailySpend.length === 0) {
       return RAW_DATA;
     }
-    const spend = dataSummary.providerSpend || { aws: 0, azure: 0, gcp: 0 };
-    const total = (spend.aws + spend.azure + spend.gcp) || 1;
-    const awsRatio = spend.aws / total;
-    const azureRatio = spend.azure / total;
-    const gcpRatio = spend.gcp / total;
+    const spend = dataSummary.providerSpend || {};
+    const total = Object.values(spend).reduce((s, v) => s + (v || 0), 0) || 1;
+
+    // Build ratios for each detected provider
+    const providerRatios = {};
+    Object.entries(spend).forEach(([key, val]) => {
+      if (val > 0) {
+        providerRatios[key.toUpperCase()] = val / total;
+      }
+    });
+
+    // If no provider data, fallback
+    if (Object.keys(providerRatios).length === 0) {
+      return RAW_DATA;
+    }
 
     const list = [];
     dataSummary.dailySpend.forEach(d => {
@@ -329,9 +339,9 @@ export const ReportsPage = () => {
       const y = dt.getFullYear();
       const m = String(dt.getMonth() + 1).padStart(2, '0');
       const monthKey = `${y}-${m}`;
-      if (awsRatio > 0) list.push({ date: monthKey, provider: 'AWS', cost: d.cost * (awsRatio || 0.6) });
-      if (azureRatio > 0) list.push({ date: monthKey, provider: 'Azure', cost: d.cost * (azureRatio || 0.3) });
-      if (gcpRatio > 0) list.push({ date: monthKey, provider: 'GCP', cost: d.cost * (gcpRatio || 0.1) });
+      Object.entries(providerRatios).forEach(([provider, ratio]) => {
+        list.push({ date: monthKey, provider, cost: d.cost * ratio });
+      });
     });
     return list.length > 0 ? list : RAW_DATA;
   }, [dataSummary]);
