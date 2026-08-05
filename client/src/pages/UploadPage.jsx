@@ -1,15 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { PageHeader } from '../components/console/PageHeader';
-import { Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database } from 'lucide-react';
+import { 
+  Upload, FileText, CheckCircle, AlertCircle, ArrowLeft, Loader2, Database,
+  FileCheck, Sparkles, Layers, DollarSign, Calendar, ShieldCheck, RefreshCw
+} from 'lucide-react';
 import api from '../services/api';
 import { useDataContext } from '../context/DataContext';
 
 export const UploadPage = () => {
   const [theme, setTheme] = useState('neon-noir-theme');
 
-  React.useEffect(() => {
+  useEffect(() => {
     const savedTheme = localStorage.getItem('console-theme');
     if (savedTheme) {
       setTheme(savedTheme);
@@ -19,7 +22,7 @@ export const UploadPage = () => {
   const [provider, setProvider] = useState('aws');
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  
+
   // Status states
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -35,9 +38,9 @@ export const UploadPage = () => {
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
   };
@@ -105,9 +108,8 @@ export const UploadPage = () => {
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          // Scale from 40 to 90
           setProgress(Math.min(90, 40 + Math.round(percentCompleted * 0.5)));
-        }
+        },
       });
 
       setProgress(100);
@@ -115,11 +117,9 @@ export const UploadPage = () => {
       setInsertedCount(response.data.recordsInserted);
       setFile(null);
 
-      // Notify all pages to re-fetch with the new file's data
       const newFileId = response.data.file?._id;
       notifyUpload(newFileId);
-      
-      // Auto-redirect to predictions page to check forecast results
+
       setTimeout(() => {
         navigate('/predictions');
       }, 2000);
@@ -137,7 +137,7 @@ export const UploadPage = () => {
   };
 
   return (
-    <ConsoleLayout title="Ingest Billing Data">
+    <ConsoleLayout title="Ingest Billing Logs">
       <PageHeader
         title="Ingest Billing Logs"
         subtitle="Upload multi-cloud billing log sheets for machine learning analytics and forecasting"
@@ -146,17 +146,14 @@ export const UploadPage = () => {
       />
 
       <div className="mx-auto max-w-4xl w-full py-6 relative z-10">
-
-        {/* Upload Container */}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Instructions Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-
-            {/* Ingestion Rules */}
             <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Database className="h-4.5 w-4.5 text-primary" />
+                <Database className="h-4.5 w-4.5 text-[#06B6D4]" />
                 Ingestion Schemas
               </h3>
               
@@ -181,7 +178,7 @@ export const UploadPage = () => {
           {/* Main Upload Box */}
           <div className="lg:col-span-2 space-y-6">
             <div className="glass-card rounded-2xl p-6 sm:p-8 border-white/5 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#06B6D4]/50 to-transparent" />
 
               {/* Status messages */}
               {success && (
@@ -342,4 +339,5 @@ export const UploadPage = () => {
     </ConsoleLayout>
   );
 };
+
 export default UploadPage;

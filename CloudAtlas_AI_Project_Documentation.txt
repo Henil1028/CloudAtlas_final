@@ -1,0 +1,121 @@
+================================================================================
+  CLOUD ATLAS AI — ENTERPRISE MULTI-CLOUD FINOPS PLATFORM
+  Comprehensive Technical Documentation & Architecture Manual
+================================================================================
+
+1. EXECUTIVE OVERVIEW & PROBLEM STATEMENT
+--------------------------------------------------------------------------------
+CloudAtlas AI is an enterprise-grade Multi-Cloud Cost Optimization & Predictive 
+Intelligence Platform designed for FinOps teams, DevOps engineers, and CTOs. 
+CloudAtlas AI unifies billing telemetry across Amazon Web Services (AWS), Microsoft 
+Azure, and Google Cloud Platform (GCP) into a single pane of glass.
+
+Key Problem Solved:
+  - Eliminates multi-cloud billing opacity and unaggregated raw log rows.
+  - Prevents unexpected budget breaches via predictive 90-day spend forecasting.
+  - Detects resource anomalies (unattached volumes, runaway lambda invocations)
+    using Machine Learning (XGBoost & One-Class Support Vector Machines).
+
+
+2. TECHNOLOGY STACK & ARCHITECTURE
+--------------------------------------------------------------------------------
+Frontend Console:
+  - Framework: React 19 + Vite 6
+  - Styling: Vanilla CSS + Tailwind CSS v4
+  - Animations: Framer Motion 12 + GSAP (ScrollTrigger & Lenis smooth scroll)
+  - Data Visualizations: Recharts
+  - Iconography: Lucide React
+
+Backend API Gateway:
+  - Server: Node.js + Express.js
+  - Database ORM: Mongoose (MongoDB)
+  - File Processing: Multer
+  - Security: JWT Bearer Tokens, Rate Limiters, Audit Logging
+
+Database:
+  - MongoDB (Default Connection: mongodb://localhost:27017/cloudatlas)
+
+Machine Learning Pipeline:
+  - PredictIQ Spend Regressor: XGBoost Time-Series Regressor
+  - Anomaly Classifier: One-Class SVM (Unsupervised Hypersphere Classifier)
+
+
+3. CORE MODULE SHOWCASE
+--------------------------------------------------------------------------------
+3.1 Enterprise Landing Page (LandingPage.jsx)
+  - WebGL Stardust & Aurora Canvas: Mouse-inertia interactive background.
+  - GSAP ScrollTrigger Gallery: Horizontal sliding showcase for AWS, Azure, GCP,
+    Kubernetes, Terraform IaC, and Snowflake/Databricks.
+  - Interactive FinOps Sandbox: 5 live demonstration tabs (Forecast, Anomaly Shield,
+    What-If Simulator, AI Copilot, Data Ingestion Validator).
+  - ROI Calculator: Real-time annual savings estimator ($5k to $500k+).
+
+3.2 Unified Animated Auth & Super Admin Gatekeeper (AuthPage.jsx & AdminLoginPage.jsx)
+  - Segmented Pill Switcher: Spring-animated glide between Sign In and Create Account.
+  - 6-Digit OTP Verification: 2-minute countdown timer with automatic code dispatch.
+  - Super Admin Gatekeeper Challenge: Restricted portal (/admin/login) requiring
+    Master Security Passcode (HenilNeelProject).
+
+3.3 PredictIQ Spend Forecast Engine (PredictionsPage.jsx)
+  - 90-Day Time-Series Projections: Combines historical linear trend slope with 
+    seasonal Fourier adjustments.
+  - What-If Sliders: Interactive controls for CPU %, RAM %, Storage GB, and Egress GB.
+  - Budget Cap Warnings: Proactive notification of projected budget breach dates.
+
+3.4 One-Class SVM Anomaly Shield (AnomalyDetectionPage.jsx)
+  - Unsupervised Outlier Classifier: Hypersphere boundary detection isolating 
+    billing spikes (z >= 1.6).
+  - Actionable Remediation: Automated guidance for unattached volumes & idle compute.
+
+
+4. PROJECT DIRECTORY STRUCTURE
+--------------------------------------------------------------------------------
+d:\main_cloud_cost\
+├── client/                      # Vite + React 19 Frontend Web Console
+│   ├── src/
+│   │   ├── components/          # Reusable UI & Console Components
+│   │   ├── context/             # DataContext (Global Upload Event Signal Bus)
+│   │   ├── pages/               # Application Pages (Dashboard, Predictions, etc.)
+│   │   ├── routes/              # AppRouter & ProtectedRoute Guards
+│   │   └── services/            # Axios API Interceptors & Auth Services
+│   └── package.json
+│
+├── server/                      # Node.js + Express Backend Server
+│   ├── config/                  # MongoDB Database Connection
+│   ├── controllers/             # Billing, Analytics, Auth, ML Controllers
+│   ├── middleware/              # Auth Protection, Rate Limiters, Multer Storage
+│   ├── models/                  # User, BillingData, UploadedFile, AuditLog Schemas
+│   ├── routes/                  # API Route Definitions
+│   └── .env                     # Server Configuration & Gatekeeper Passcode
+│
+└── sample_data/                 # Test Datasets
+    └── sample_cloud_billing.csv # Pre-formatted 50-row multi-cloud dataset
+
+
+5. DEMO ACCESS CREDENTIALS
+--------------------------------------------------------------------------------
+Account Role      Email / Username           Password         Gatekeeper Secret
+--------------------------------------------------------------------------------
+DevOps / User     devops@cloudatlas.io       DemoPass123!     N/A
+Super Admin       admin1@cloudatlas.ai       AdminPass123!    HenilNeelProject
+--------------------------------------------------------------------------------
+
+
+6. LOCAL SETUP & OPERATIONAL COMMANDS
+--------------------------------------------------------------------------------
+Step 1: Start Backend Server
+  cd server
+  npm install
+  npm run dev
+  (Backend runs on http://localhost:5000)
+
+Step 2: Start Frontend Console
+  cd client
+  npm install
+  npm run dev
+  (Frontend runs on http://localhost:5173)
+
+
+================================================================================
+CloudAtlas AI — Proprietary Enterprise FinOps Platform © 2026. All rights reserved.
+================================================================================
