@@ -1207,37 +1207,124 @@ html.light-mode aside {
   box-shadow: 2px 0 10px rgba(15, 23, 42, 0.02) !important;
 }
 
-/* Text Highlighting in Light Mode */
-html.light-mode .text-slate-100,
-html.light-mode .text-slate-200,
-html.light-mode .text-white {
+/* ============================================================
+   ULTRA-PREMIUM HIGH-CONTRAST LIGHT THEME (LIGHT MODE)
+   ============================================================ */
+html.light-mode,
+body.light-mode {
+  background-color: #F8FAFC !important;
   color: #0F172A !important;
 }
 
-html.light-mode .text-slate-300,
-html.light-mode .text-slate-400 {
-  color: #334155 !important;
+/* Base Headings & Text in Light Mode */
+html.light-mode h1,
+html.light-mode h2,
+html.light-mode h3,
+html.light-mode h4,
+html.light-mode h5,
+html.light-mode h6 {
+  color: #0F172A !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
 }
 
-html.light-mode .text-slate-500 {
+html.light-mode p,
+html.light-mode span,
+html.light-mode div,
+html.light-mode label {
+  color: #1E293B;
+}
+
+/* Card & Glass Containers in Light Mode */
+html.light-mode .console-card,
+html.light-mode .bg-slate-900\/50,
+html.light-mode .bg-slate-900\/60,
+html.light-mode .bg-slate-900\/80,
+html.light-mode .bg-slate-900,
+html.light-mode .bg-slate-800\/50,
+html.light-mode .bg-slate-800\/60,
+html.light-mode .bg-slate-800,
+html.light-mode .glass-panel,
+html.light-mode [class*="bg-slate-900"],
+html.light-mode [class*="bg-slate-800"] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+  color: #0F172A !important;
+}
+
+/* Topbar & Sidebar in Light Mode */
+html.light-mode .console-topbar,
+html.light-mode header {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+}
+
+html.light-mode .console-sidebar,
+html.light-mode aside {
+  background-color: #FFFFFF !important;
+  border-right: 1px solid #E2E8F0 !important;
+  box-shadow: 2px 0 10px rgba(15, 23, 42, 0.03) !important;
+}
+
+/* High-Contrast Crisp Typography for Light Mode */
+html.light-mode .text-slate-100,
+html.light-mode .text-slate-200,
+html.light-mode .text-white,
+html.light-mode .text-gray-100,
+html.light-mode .text-gray-200,
+html.light-mode .text-gray-900 {
+  color: #0F172A !important;
+  font-weight: 600;
+}
+
+html.light-mode .text-slate-300,
+html.light-mode .text-slate-400,
+html.light-mode .text-gray-300,
+html.light-mode .text-gray-400 {
+  color: #334155 !important;
+  font-weight: 500;
+}
+
+html.light-mode .text-slate-500,
+html.light-mode .text-gray-500 {
+  color: #475569 !important;
+}
+
+html.light-mode .text-slate-600,
+html.light-mode .text-gray-600 {
   color: #64748B !important;
+}
+
+/* Gradient Text Fallback for Light Mode */
+html.light-mode .gradient-text-purple,
+html.light-mode .gradient-text-warm {
+  background: linear-gradient(135deg, #6366F1, #2563EB) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 /* Recharts & SVG Chart Customization in Light Mode */
 html.light-mode .recharts-cartesian-grid line {
-  stroke: rgba(0, 0, 0, 0.07) !important;
+  stroke: rgba(15, 23, 42, 0.08) !important;
 }
 
 html.light-mode .recharts-text,
-html.light-mode .recharts-label {
-  fill: #334155 !important;
+html.light-mode .recharts-label,
+html.light-mode .recharts-cartesian-axis-tick-value {
+  fill: #1E293B !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
 }
 
 html.light-mode .recharts-default-tooltip {
   background-color: #FFFFFF !important;
   border: 1px solid #CBD5E1 !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12) !important;
   color: #0F172A !important;
+  border-radius: 8px !important;
 }
 
 /* Inputs, Selects & Form Controls */
@@ -1247,39 +1334,51 @@ html.light-mode textarea {
   background-color: #FFFFFF !important;
   color: #0F172A !important;
   border: 1px solid #CBD5E1 !important;
+  font-weight: 500 !important;
 }
 
-html.light-mode input::placeholder {
-  color: #94A3B8 !important;
+html.light-mode input::placeholder,
+html.light-mode textarea::placeholder {
+  color: #64748B !important;
 }
 
-/* Tables & Data Grids */
+/* Tables & Data Grids in Light Mode */
+html.light-mode table {
+  background-color: #FFFFFF !important;
+}
+
 html.light-mode table th {
-  background-color: #F8FAFC !important;
-  color: #334155 !important;
-  border-bottom: 1px solid #E2E8F0 !important;
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #E2E8F0 !important;
 }
 
 html.light-mode table td {
-  border-bottom: 1px solid #F1F5F9 !important;
+  border-bottom: 1px solid #E2E8F0 !important;
   color: #1E293B !important;
+  font-weight: 500 !important;
 }
 
 html.light-mode table tr:hover td {
-  background-color: #F1F5F9 !important;
+  background-color: #F8FAFC !important;
 }
 
-/* Interactive Buttons & Badges */
+/* Buttons & Badges in Light Mode */
 html.light-mode button.bg-slate-800,
-html.light-mode button.bg-slate-900 {
+html.light-mode button.bg-slate-900,
+html.light-mode .bg-slate-800,
+html.light-mode .bg-slate-900 {
   background-color: #F1F5F9 !important;
   color: #0F172A !important;
   border: 1px solid #CBD5E1 !important;
+  font-weight: 600 !important;
 }
 
 html.light-mode button.bg-slate-800:hover,
 html.light-mode button.bg-slate-900:hover {
   background-color: #E2E8F0 !important;
+  color: #020617 !important;
 }
 
 /* Light Mode Custom Scrollbar */
@@ -1288,12 +1387,12 @@ html.light-mode ::-webkit-scrollbar-track {
 }
 
 html.light-mode ::-webkit-scrollbar-thumb {
-  background: #CBD5E1 !important;
+  background: #94A3B8 !important;
   border-radius: 4px;
 }
 
 html.light-mode ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8 !important;
+  background: #64748B !important;
 }
 
 
