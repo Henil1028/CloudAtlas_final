@@ -1277,25 +1277,41 @@ html.light-mode .text-gray-100,
 html.light-mode .text-gray-200,
 html.light-mode .text-gray-900 {
   color: #0F172A !important;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 html.light-mode .text-slate-300,
 html.light-mode .text-slate-400,
 html.light-mode .text-gray-300,
-html.light-mode .text-gray-400 {
-  color: #334155 !important;
-  font-weight: 500;
-}
-
+html.light-mode .text-gray-400,
 html.light-mode .text-slate-500,
 html.light-mode .text-gray-500 {
-  color: #475569 !important;
+  color: #1E293B !important;
+  font-weight: 600;
 }
 
 html.light-mode .text-slate-600,
 html.light-mode .text-gray-600 {
-  color: #64748B !important;
+  color: #334155 !important;
+}
+
+/* Light mode card borders and backgrounds */
+html.light-mode .border-slate-800,
+html.light-mode .border-slate-700,
+html.light-mode .border-slate-800\/80,
+html.light-mode .border-slate-800\/50,
+html.light-mode .border-white\/10,
+html.light-mode .border-white\/5 {
+  border-color: #CBD5E1 !important;
+}
+
+html.light-mode .bg-slate-950,
+html.light-mode .bg-slate-950\/60,
+html.light-mode .bg-slate-950\/70,
+html.light-mode .bg-slate-950\/80,
+html.light-mode .bg-slate-950\/40 {
+  background-color: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
 }
 
 /* Gradient Text Fallback for Light Mode */

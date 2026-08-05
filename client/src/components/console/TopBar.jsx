@@ -307,16 +307,17 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
             style={{
               display: 'flex', alignItems: 'center', gap: '8px',
               padding: '6px 10px 6px 6px', borderRadius: '10px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+              background: darkMode ? 'rgba(255,255,255,0.04)' : '#F1F5F9',
+              border: darkMode ? '1px solid rgba(255,255,255,0.07)' : '1px solid #CBD5E1',
               cursor: 'pointer', transition: 'all 0.2s ease',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.07)';
-              e.currentTarget.style.borderColor = 'rgba(124,58,237,0.2)';
+              e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.07)' : '#E2E8F0';
+              e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+              e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.04)' : '#F1F5F9';
+              e.currentTarget.style.borderColor = darkMode ? 'rgba(255,255,255,0.07)' : '#CBD5E1';
             }}
           >
             <div style={{
@@ -329,14 +330,14 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
               {initials}
             </div>
             <div className="hidden sm:block" style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#F1F5F9', fontFamily: 'Inter, sans-serif', lineHeight: 1.2 }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: darkMode ? '#F1F5F9' : '#0F172A', fontFamily: 'Inter, sans-serif', lineHeight: 1.2 }}>
                 {user?.name?.split(' ')[0] || 'Admin'}
               </div>
-              <div style={{ fontSize: '10px', color: '#475569', fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#475569', fontFamily: 'Inter, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {user?.role || 'super_admin'}
               </div>
             </div>
-            <ChevronDown size={12} color="#475569" style={{ transition: 'transform 0.2s', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+            <ChevronDown size={12} color={darkMode ? '#94A3B8' : '#475569'} style={{ transition: 'transform 0.2s', transform: showProfile ? 'rotate(180deg)' : 'rotate(0deg)' }} />
           </button>
 
           {showProfile && (
@@ -345,14 +346,15 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
               <div className="animate-modal-enter" style={{
                 position: 'absolute', top: '44px', right: 0,
                 width: '260px', zIndex: 50,
-                background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '14px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                background: darkMode ? '#0B1023' : '#FFFFFF',
+                border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                borderRadius: '14px', boxShadow: darkMode ? '0 20px 60px rgba(0,0,0,0.5)' : '0 10px 40px rgba(15,23,42,0.15)',
                 overflow: 'hidden', padding: '8px',
               }}>
                 {/* Profile Header with styled Role Badge */}
-                <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '6px' }}>
-                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#F1F5F9' }}>{user?.name}</p>
-                  <p style={{ margin: '2px 0 6px', fontSize: '11px', color: '#64748B' }}>{user?.email}</p>
+                <div style={{ padding: '10px 12px', borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #F1F5F9', marginBottom: '6px' }}>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: darkMode ? '#F1F5F9' : '#0F172A' }}>{user?.name}</p>
+                  <p style={{ margin: '2px 0 6px', fontSize: '11px', color: darkMode ? '#64748B' : '#475569' }}>{user?.email}</p>
                   <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase ${getRoleBadgeColor(user?.role)}`}>
                     {formatRole(user?.role)}
                   </span>
