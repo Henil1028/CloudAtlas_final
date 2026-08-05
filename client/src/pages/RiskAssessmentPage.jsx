@@ -198,27 +198,26 @@ export const RiskAssessmentPage = () => {
     const azureCost = spend.azure || 0;
     const gcpCost = spend.gcp || 0;
 
-    // Calculate share of total spend per provider
-    const awsShare = awsCost > 0 ? (awsCost / total) * 100 : 0;
-    const azureShare = azureCost > 0 ? (azureCost / total) * 100 : 0;
-    const gcpShare = gcpCost > 0 ? (gcpCost / total) * 100 : 0;
+    const awsShare = awsCost > 0 ? (awsCost / total) : 0;
+    const azureShare = azureCost > 0 ? (azureCost / total) : 0;
+    const gcpShare = gcpCost > 0 ? (gcpCost / total) : 0;
 
     return [
       {
         provider: 'AWS',
-        risk: awsCost > 0 ? Math.min(95, Math.max(30, Math.round(awsShare * 0.6 + 30))) : 0,
+        risk: awsCost > 0 ? Math.round(awsShare * 80) : 0,
         spend: awsCost,
         color: '#F59E0B'
       },
       {
         provider: 'Azure',
-        risk: azureCost > 0 ? Math.min(95, Math.max(30, Math.round(azureShare * 0.6 + 30))) : 0,
+        risk: azureCost > 0 ? Math.round(azureShare * 80) : 0,
         spend: azureCost,
         color: '#3B82F6'
       },
       {
         provider: 'GCP',
-        risk: gcpCost > 0 ? Math.min(95, Math.max(30, Math.round(gcpShare * 0.6 + 30))) : 0,
+        risk: gcpCost > 0 ? Math.round(gcpShare * 80) : 0,
         spend: gcpCost,
         color: '#22C55E'
       },
@@ -233,7 +232,7 @@ export const RiskAssessmentPage = () => {
     const totalCost = dataSummary.totalCost || 1;
     return services.slice(0, 7).map((s) => {
       const sharePct = (s.cost / totalCost) * 100;
-      const risk = Math.min(95, Math.max(22, Math.round(sharePct * 1.8 + 30)));
+      const risk = Math.min(100, Math.max(10, Math.round(sharePct * 1.8 + 15)));
       const status = risk >= 70 ? 'high' : risk >= 40 ? 'medium' : 'low';
       const formattedSpend = s.cost >= 1000 ? `$${Math.round(s.cost / 1000)}K` : `$${Math.round(s.cost)}`;
       return {
@@ -247,9 +246,36 @@ export const RiskAssessmentPage = () => {
 
   const dynamicOverallScore = React.useMemo(() => {
     if (!dataSummary || !dataSummary.serviceSpend || dataSummary.serviceSpend.length === 0) return 62;
-    const topCost = dataSummary.serviceSpend[0]?.cost || 0;
-    const concentrationPct = (topCost / (dataSummary.totalCost || 1)) * 100;
-    return Math.min(95, Math.max(20, Math.round(concentrationPct * 1.2 + 25)));
+
+    const totalCost = dataSummary.totalCost || 1;
+
+    // 1. Provider Lock-in Risk (0-100)
+    const spend = dataSummary.providerSpend || {};
+    const pTotal = (spend.aws || 0) + (spend.azure || 0) + (spend.gcp || 0) || totalCost;
+    const maxProviderShare = Math.max((spend.aws || 0) / pTotal, (spend.azure || 0) / pTotal, (spend.gcp || 0) / pTotal);
+    const providerRiskScore = Math.round(maxProviderShare * 75);
+
+    // 2. Service Concentration Risk (Herfindahl-Hirschman Index 0-100)
+    const hhi = dataSummary.serviceSpend.reduce((sum, s) => {
+      const share = (s.cost || 0) / totalCost;
+      return sum + (share * share);
+    }, 0);
+    const serviceConcentrationRisk = Math.round(hhi * 100);
+
+    // 3. Volatility Risk (Coefficient of Variation 0-100)
+    const daily = dataSummary.dailySpend || [];
+    let volatilityRisk = 20;
+    if (daily.length > 1) {
+      const mean = daily.reduce((s, d) => s + (d.cost || 0), 0) / daily.length;
+      if (mean > 0) {
+        const variance = daily.reduce((s, d) => s + Math.pow((d.cost || 0) - mean, 2), 0) / daily.length;
+        const cv = Math.sqrt(variance) / mean;
+        volatilityRisk = Math.min(100, Math.round(cv * 60));
+      }
+    }
+
+    const composite = (providerRiskScore * 0.40) + (serviceConcentrationRisk * 0.35) + (volatilityRisk * 0.25);
+    return Math.min(100, Math.max(5, Math.round(composite)));
   }, [dataSummary]);
 
   const dynamicHeatmap = React.useMemo(() => {

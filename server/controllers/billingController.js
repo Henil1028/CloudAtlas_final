@@ -366,7 +366,7 @@ const getSummary = async (req, res) => {
     const dailySpend = Object.keys(dailyMap).map((date) => ({
       date,
       cost: Math.round(dailyMap[date] * 100) / 100,
-    })).sort((a, b) => a.date.localeCompare(b.date)).slice(-30); // limit to last 30 active days
+    })).sort((a, b) => a.date.localeCompare(b.date));
 
     // Format Monthly spend list
     const monthlySpend = Object.keys(monthlyMap).map((month) => ({

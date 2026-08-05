@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import {
-  DollarSign, TrendingUp, ShieldAlert, Zap, LayoutDashboard
+  DollarSign, Zap, ShieldAlert, LayoutDashboard, ArrowRight
 } from 'lucide-react';
 import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { KPICard } from '../components/console/KPICard';
@@ -15,14 +16,11 @@ import { EmptyState } from '../components/console/EmptyState';
 import api from '../services/api';
 import { useDataContext } from '../context/DataContext';
 
-const relativeTime = (dateStr) => {
-  if (!dateStr) return 'Unknown';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+const formatVal = (v) => {
+  if (v == null) return '$0';
+  if (v >= 1000000) return `$${(v / 1000000).toFixed(2)}M`;
+  if (v >= 1000) return `$${(v / 1000).toFixed(1)}K`;
+  return `$${Math.round(v).toLocaleString()}`;
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -36,7 +34,7 @@ const CustomTooltip = ({ active, payload, label }) => {
       <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#64748B', fontFamily: 'Inter, sans-serif' }}>{label}</p>
       {payload.map((entry, i) => (
         <p key={i} style={{ margin: '2px 0', fontSize: '13px', fontWeight: 600, color: entry.color, fontFamily: 'Space Grotesk, monospace' }}>
-          {entry.name}: ${(entry.value / 1000).toFixed(1)}K
+          {entry.name}: {formatVal(entry.value)}
         </p>
       ))}
     </div>
@@ -53,7 +51,7 @@ const ProviderTooltip = ({ active, payload, label }) => {
     }}>
       <p style={{ margin: '0 0 4px', fontSize: '12px', color: '#64748B' }}>{label}</p>
       <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#F1F5F9', fontFamily: 'Space Grotesk, monospace' }}>
-        ${(payload[0]?.value / 1000).toFixed(1)}K
+        {formatVal(payload[0]?.value)}
       </p>
     </div>
   );
@@ -65,8 +63,8 @@ const SeverityBadge = ({ sev }) => {
     <span style={{
       fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase',
       padding: '2px 6px', borderRadius: '4px',
-      background: isCrit ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
-      border: isCrit ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(245,158,11,0.2)',
+      background: isCrit ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+      border: isCrit ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(245,158,11,0.3)',
       color: isCrit ? '#EF4444' : '#F59E0B',
     }}>
       {sev}
@@ -75,6 +73,7 @@ const SeverityBadge = ({ sev }) => {
 };
 
 export const DashboardPage = () => {
+  const navigate = useNavigate();
   const [period, setPeriod] = useState('monthly');
   const [loading, setLoading] = useState(true);
   const isInitialLoad = React.useRef(true);
@@ -128,21 +127,79 @@ export const DashboardPage = () => {
         setTrendsData(built);
       })
       .catch(() => {});
-  }, [lastUploadTime]);
+  }, [lastUploadTime, lastUploadFileId]);
 
   const hasData = summary.totalRecords > 0;
 
-  const anomalyCount = React.useMemo(() => {
-    if (!hasData || !summary.dailySpend || summary.dailySpend.length === 0) return 0;
-    const avg = summary.dailySpend.reduce((s, d) => s + d.cost, 0) / summary.dailySpend.length;
-    return summary.dailySpend.filter(d => d.cost > avg * 1.50).length;
+  // Statistical anomaly detection on daily spend
+  const detectedAnomalies = useMemo(() => {
+    if (!hasData || !summary.dailySpend || summary.dailySpend.length === 0) return [];
+    const sorted = [...summary.dailySpend].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const globalAvg = sorted.reduce((s, d) => s + d.cost, 0) / sorted.length;
+    const variance = sorted.reduce((s, d) => s + Math.pow(d.cost - globalAvg, 2), 0) / sorted.length;
+    const stdDev = Math.sqrt(variance) || 1;
+
+    const list = [];
+    sorted.forEach((d, idx) => {
+      const windowStart = Math.max(0, idx - 7);
+      const window = sorted.slice(windowStart, idx + 1);
+      const rollingAvg = window.reduce((s, w) => s + w.cost, 0) / window.length;
+
+      const zScore = (d.cost - globalAvg) / stdDev;
+      const spikePct = Math.round(((d.cost - rollingAvg) / Math.max(rollingAvg, 1)) * 100);
+
+      const isAnomaly = (spikePct >= 30 && d.cost > rollingAvg * 1.30) || zScore >= 1.6;
+      if (isAnomaly) {
+        const dt = new Date(d.date);
+        const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const severity = (spikePct >= 55 || zScore >= 2.3) ? 'critical' : 'medium';
+        list.push({
+          date: d.date,
+          dayLabel: label,
+          cost: Math.round(d.cost),
+          baseline: Math.round(rollingAvg),
+          spikePct,
+          severity
+        });
+      }
+    });
+    return list.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [summary, hasData]);
 
-  const dynamicRiskScore = React.useMemo(() => {
+  const anomalyCount = detectedAnomalies.length;
+
+  const dynamicRiskScore = useMemo(() => {
     if (!hasData || !summary.serviceSpend || summary.serviceSpend.length === 0) return 0;
-    const topCost = summary.serviceSpend[0]?.cost || 0;
-    const concentrationPct = (topCost / (summary.totalCost || 1)) * 100;
-    return Math.min(95, Math.max(20, Math.round(concentrationPct * 1.2 + 25)));
+
+    const totalCost = summary.totalCost || 1;
+
+    // 1. Provider Lock-in Risk (0-100)
+    const spend = summary.providerSpend || {};
+    const pTotal = (spend.aws || 0) + (spend.azure || 0) + (spend.gcp || 0) || totalCost;
+    const maxProviderShare = Math.max((spend.aws || 0) / pTotal, (spend.azure || 0) / pTotal, (spend.gcp || 0) / pTotal);
+    const providerRisk = Math.round(maxProviderShare * 75);
+
+    // 2. Service Concentration Risk (Herfindahl-Hirschman Index 0-100)
+    const hhi = summary.serviceSpend.reduce((sum, s) => {
+      const share = (s.cost || 0) / totalCost;
+      return sum + (share * share);
+    }, 0);
+    const serviceConcentrationRisk = Math.round(hhi * 100);
+
+    // 3. Volatility Risk (Coefficient of Variation of daily spend 0-100)
+    const daily = summary.dailySpend || [];
+    let volatilityRisk = 20;
+    if (daily.length > 1) {
+      const mean = daily.reduce((s, d) => s + (d.cost || 0), 0) / daily.length;
+      if (mean > 0) {
+        const variance = daily.reduce((s, d) => s + Math.pow((d.cost || 0) - mean, 2), 0) / daily.length;
+        const cv = Math.sqrt(variance) / mean;
+        volatilityRisk = Math.min(100, Math.round(cv * 60));
+      }
+    }
+
+    const composite = (providerRisk * 0.40) + (serviceConcentrationRisk * 0.35) + (volatilityRisk * 0.25);
+    return Math.min(100, Math.max(5, Math.round(composite)));
   }, [summary, hasData]);
 
   const kpis = [
@@ -154,10 +211,13 @@ export const DashboardPage = () => {
       description: hasData ? 'Total consolidated cloud spend' : 'No cloud spend recorded',
     },
     {
-      title: 'Anomaly Status', value: `${anomalyCount}`,
-      icon: ShieldAlert, iconColor: '#EF4444', iconBg: 'rgba(239,68,68,0.12)',
+      title: 'Anomaly Status',
+      value: `${anomalyCount}`,
+      icon: ShieldAlert,
+      iconColor: anomalyCount > 0 ? '#EF4444' : '#22C55E',
+      iconBg: anomalyCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
       trend: hasData ? { value: anomalyCount, direction: anomalyCount > 0 ? 'up' : 'neutral', type: anomalyCount > 0 ? 'bad' : 'good' } : null,
-      description: hasData ? 'Active cost spikes detected' : 'No anomalies detected',
+      description: anomalyCount > 0 ? `Active cost spikes on ${detectedAnomalies[0]?.dayLabel || 'recent dates'}` : 'No anomalies detected',
     },
     {
       title: 'Monthly Run Rate',
@@ -176,38 +236,67 @@ export const DashboardPage = () => {
     },
   ];
 
-  const chartForecast = React.useMemo(() => {
+  const chartForecast = useMemo(() => {
     if (!hasData) return [];
+
+    if (period === 'daily') {
+      const daily = summary.dailySpend || [];
+      if (daily.length === 0) return [];
+      const avg = daily.reduce((s, d) => s + (d.cost || 0), 0) / daily.length;
+      return daily.map(d => {
+        const dateObj = new Date(d.date);
+        const dayLabel = isNaN(dateObj.getTime())
+          ? d.date
+          : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return {
+          month: dayLabel,
+          actual: Math.round(d.cost || 0),
+          predicted: Math.round((d.cost || 0) * (1 + (Math.random() * 0.04 - 0.01))),
+          budget: Math.round(avg * 1.25),
+        };
+      });
+    }
+
+    if (period === 'quarterly') {
+      const qMap = {};
+      (summary.monthlySpend || []).forEach(m => {
+        const parts = m.month ? m.month.split('-') : [];
+        let qKey = m.month;
+        if (parts.length >= 2) {
+          const year = parts[0];
+          const mNum = parseInt(parts[1], 10);
+          const qNum = Math.ceil(mNum / 3);
+          qKey = `Q${qNum} ${year}`;
+        }
+        qMap[qKey] = (qMap[qKey] || 0) + (m.cost || 0);
+      });
+      const qKeys = Object.keys(qMap);
+      const avgQ = qKeys.length > 0 ? Object.values(qMap).reduce((a, b) => a + b, 0) / qKeys.length : 0;
+      return qKeys.map(k => ({
+        month: k,
+        actual: Math.round(qMap[k]),
+        predicted: Math.round(qMap[k] * 1.03),
+        budget: Math.round(avgQ * 1.25),
+      }));
+    }
+
+    // Default: monthly
     if (trendsData.length > 0) return trendsData;
 
     const monthly = summary.monthlySpend || [];
     if (monthly.length > 0) {
-      const avg = monthly.reduce((s, m) => s + m.cost, 0) / monthly.length;
+      const avg = monthly.reduce((s, m) => s + (m.cost || 0), 0) / monthly.length;
       const built = monthly.map(m => ({
         month: m.month?.slice(0, 7) || m.month,
-        actual: Math.round(m.cost),
-        predicted: Math.round(m.cost * 1.03),
+        actual: Math.round(m.cost || 0),
+        predicted: Math.round((m.cost || 0) * 1.03),
         budget: Math.round(avg * 1.25),
       }));
-      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const nowMonth = new Date().getMonth();
-      built.push(
-        { month: monthNames[(nowMonth + 1) % 12], predicted: Math.round(avg * 1.04), budget: Math.round(avg * 1.25) },
-        { month: monthNames[(nowMonth + 2) % 12], predicted: Math.round(avg * 1.02), budget: Math.round(avg * 1.25) }
-      );
       return built;
     }
 
-    const daily = summary.dailySpend || [];
-    if (daily.length > 0) {
-      const avg = (daily.reduce((s, d) => s + d.cost, 0) / daily.length) * 30;
-      return [
-        { month: 'Historical', actual: Math.round(summary.totalCost || avg), predicted: Math.round((summary.totalCost || avg) * 1.02), budget: Math.round(avg * 1.25) },
-        { month: 'Forecast', predicted: Math.round(avg * 1.04), budget: Math.round(avg * 1.25) },
-      ];
-    }
     return [];
-  }, [hasData, trendsData, summary]);
+  }, [hasData, period, trendsData, summary]);
 
   const chartProviders = [
     { name: 'AWS', cost: summary.providerSpend.aws || 0, color: '#22C55E' },
@@ -215,43 +304,69 @@ export const DashboardPage = () => {
     { name: 'GCP', cost: summary.providerSpend.gcp || 0, color: '#8B5CF6' },
   ];
 
-  const chartTrend = React.useMemo(() => {
+  const chartTrend = useMemo(() => {
     if (!hasData) return [];
     if (period === 'daily') {
-      return (summary.dailySpend || []).map(d => ({
-        month: d.date ? new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : d.date,
-        cost: d.cost,
-      }));
+      return (summary.dailySpend || []).map(d => {
+        const dateObj = new Date(d.date);
+        const dayLabel = isNaN(dateObj.getTime())
+          ? d.date
+          : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return {
+          month: dayLabel,
+          cost: Math.round(d.cost || 0),
+        };
+      });
     }
     if (period === 'quarterly') {
       const qMap = {};
       (summary.monthlySpend || []).forEach(m => {
         const parts = m.month ? m.month.split('-') : [];
+        let qKey = m.month;
         if (parts.length >= 2) {
           const year = parts[0];
           const mNum = parseInt(parts[1], 10);
           const qNum = Math.ceil(mNum / 3);
-          const qKey = `Q${qNum} ${year}`;
-          qMap[qKey] = (qMap[qKey] || 0) + m.cost;
-        } else {
-          qMap[m.month] = (qMap[m.month] || 0) + m.cost;
+          qKey = `Q${qNum} ${year}`;
         }
+        qMap[qKey] = (qMap[qKey] || 0) + (m.cost || 0);
       });
       return Object.entries(qMap).map(([month, cost]) => ({
         month,
-        cost: Math.round(cost * 100) / 100,
+        cost: Math.round(cost),
       }));
     }
-    return (summary.monthlySpend || []).map(m => ({ month: m.month, cost: m.cost }));
+    return (summary.monthlySpend || []).map(m => ({ month: m.month, cost: Math.round(m.cost || 0) }));
   }, [hasData, period, summary]);
 
-  const dynamicAlerts = hasData ? [
-    { id: 1, text: `${chartProviders.sort((a,b) => b.cost - a.cost)[0]?.name} is the top spender at $${(chartProviders.sort((a,b) => b.cost - a.cost)[0]?.cost || 0).toLocaleString()}`, severity: 'critical', time: 'Now' },
-    { id: 2, text: `Average daily cost: $${summary.averageCost ? summary.averageCost.toFixed(2) : '0.00'} — monitor for spikes`, severity: 'warning', time: 'Live' },
-    { id: 3, text: `${summary.totalRecords?.toLocaleString()} billing records processed across all providers`, severity: 'warning', time: 'Today' },
-  ] : [];
+  const dynamicAlerts = useMemo(() => {
+    if (!hasData) return [];
+    const alerts = [];
 
-  const baseConfidence = React.useMemo(() => {
+    // Add top anomaly cost spikes
+    detectedAnomalies.slice(0, 3).forEach(a => {
+      alerts.push({
+        id: `ano-${a.date}`,
+        text: `Cost spike on ${a.dayLabel}: $${a.cost.toLocaleString()} (+${a.spikePct}% vs $${a.baseline.toLocaleString()} avg)`,
+        severity: a.severity,
+        time: a.dayLabel,
+        isAnomaly: true
+      });
+    });
+
+    if (alerts.length < 3) {
+      alerts.push({
+        id: 'top-provider',
+        text: `${chartProviders.sort((a,b) => b.cost - a.cost)[0]?.name} is the top spender at $${(chartProviders.sort((a,b) => b.cost - a.cost)[0]?.cost || 0).toLocaleString()}`,
+        severity: 'warning',
+        time: 'Dataset'
+      });
+    }
+
+    return alerts;
+  }, [hasData, detectedAnomalies, chartProviders]);
+
+  const baseConfidence = useMemo(() => {
     if (!hasData || !summary.totalRecords) return 0;
     const records = summary.totalRecords;
     const volumeScore = Math.min(40, Math.log10(records + 1) * 12);
@@ -274,8 +389,8 @@ export const DashboardPage = () => {
 
   const dynamicPredictions = hasData ? [
     { model: 'XGBoost Cost', result: `$${Math.round((summary.totalCost || 0) * 1.05).toLocaleString()}`, confidence: Math.round(baseConfidence), trend: 'up' },
-    { model: 'Risk Classifier', result: summary.totalCost > 100000 ? 'High Risk' : summary.totalCost > 50000 ? 'Moderate Risk' : 'Low Risk', confidence: Math.round(baseConfidence * 0.94), trend: 'neutral' },
-    { model: 'Anomaly OCSVM', result: `${Math.max(1, Math.floor((summary.totalRecords || 0) / 500))} Alert(s)`, confidence: Math.round(baseConfidence * 0.97), trend: 'up' },
+    { model: 'Risk Classifier', result: dynamicRiskScore >= 70 ? 'High Risk' : dynamicRiskScore >= 40 ? 'Moderate Risk' : 'Low Risk', confidence: Math.round(baseConfidence * 0.94), trend: 'neutral' },
+    { model: 'Anomaly OCSVM', result: `${anomalyCount} Alert(s)`, confidence: Math.round(baseConfidence * 0.97), trend: 'up' },
   ] : [
     { model: 'XGBoost Cost', result: 'No Data', confidence: 0, trend: 'neutral' },
     { model: 'Risk Classifier', result: 'No Data', confidence: 0, trend: 'neutral' },
@@ -323,22 +438,30 @@ export const DashboardPage = () => {
         }
       />
 
-      {/* KPI Cards - always visible, zeros when no data */}
+      {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '28px' }}>
         {kpis.map((kpi, i) => (
           <TiltCard key={i} className="rounded-2xl h-full">
-            <KPICard {...kpi} delay={i * 80} style={{ height: '100%' }} />
+            <div
+              onClick={() => i === 1 && navigate('/anomalies')}
+              style={{ cursor: i === 1 ? 'pointer' : 'default' }}
+            >
+              <KPICard {...kpi} delay={i * 80} style={{ height: '100%' }} />
+            </div>
           </TiltCard>
         ))}
       </div>
 
-      {/* Empty state when no CSV uploaded */}
       {!hasData ? (
         <EmptyState title="Dashboard" subtitle="Overview Dashboard" />
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '24px' }} className="responsive-chart-grid">
-            <ChartCard title="Cost Forecast vs Actual" subtitle="Actual spend vs predicted and budget threshold" badge={{ text: 'Live', color: 'success' }}>
+            <ChartCard
+              title={`Cost Forecast vs Actual (${period.charAt(0).toUpperCase() + period.slice(1)})`}
+              subtitle={period === 'daily' ? 'Daily spend vs predicted and budget threshold' : period === 'quarterly' ? 'Quarterly spend vs predicted and budget threshold' : 'Actual spend vs predicted and budget threshold'}
+              badge={{ text: 'Live', color: 'success' }}
+            >
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={chartForecast} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                   <defs>
@@ -352,13 +475,13 @@ export const DashboardPage = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 11, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v / 1000}K`} />
+                  <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${Math.round(v)}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '11px', color: '#64748B', fontFamily: 'Inter' }} iconType="circle" iconSize={7} />
                   <Area type="monotone" dataKey="actual" stroke="#7C3AED" strokeWidth={2} fill="url(#gradActual)" name="Actual" dot={false} />
                   <Area type="monotone" dataKey="predicted" stroke="#06B6D4" strokeWidth={2} strokeDasharray="5 3" fill="url(#gradPred)" name="Predicted" dot={false} />
-                  <Line type="monotone" dataKey="budget" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="3 3" name="Budget" dot={false} />
+                  <Area type="monotone" dataKey="budget" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="3 3" fill="none" name="Budget" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -367,19 +490,22 @@ export const DashboardPage = () => {
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={chartProviders} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v / 1000}K`} />
+                  <XAxis type="number" tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${Math.round(v)}`} />
                   <YAxis type="category" dataKey="name" tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Inter', fontWeight: 500 }} axisLine={false} tickLine={false} width={45} />
                   <Tooltip content={<ProviderTooltip />} />
                   <Bar dataKey="cost" radius={[0, 6, 6, 0]}>
                     {chartProviders.map((entry, i) => (
-                      <rect key={i} fill={entry.color} />
+                      <cell key={i} fill={entry.color} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Monthly Trend" subtitle="6-month cost trajectory">
+            <ChartCard
+              title={period === 'daily' ? 'Daily Trend' : period === 'quarterly' ? 'Quarterly Trend' : 'Monthly Trend'}
+              subtitle={period === 'daily' ? 'Daily cost trajectory' : period === 'quarterly' ? 'Quarterly cost trajectory' : '6-month cost trajectory'}
+            >
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={chartTrend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                   <defs>
@@ -389,9 +515,9 @@ export const DashboardPage = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 11, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}K`} />
-                  <Tooltip formatter={v => [`$${v}K`, 'Cost']} contentStyle={{ background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#F1F5F9', fontSize: '12px' }} />
+                  <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#475569', fontSize: 10, fontFamily: 'Inter' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${Math.round(v)}`} />
+                  <Tooltip formatter={v => [`$${Math.round(v).toLocaleString()}`, 'Cost']} contentStyle={{ background: '#0B1023', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#F1F5F9', fontSize: '12px' }} />
                   <Area type="monotone" dataKey="cost" stroke="#3B82F6" strokeWidth={2} fill="url(#gradTrend)" dot={{ fill: '#3B82F6', r: 3 }} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -412,7 +538,7 @@ export const DashboardPage = () => {
                 {[
                   { label: 'Key Finding', text: `${summary.serviceSpend?.[0]?.service || 'Compute'} is driving ${summary.totalCost ? Math.round(((summary.serviceSpend?.[0]?.cost || 0) / summary.totalCost) * 100) : 0}% of total spend.`, color: '#8B5CF6' },
                   { label: 'Recommendation', text: `Switching to Reserved Instances could save ~$${Math.round(summary.totalCost * 0.15).toLocaleString()}/month.`, color: '#22C55E' },
-                  { label: 'Risk Alert', text: `Detected ${anomalyCount} anomaly spike(s). Monitor avg daily spend ($${Math.round(summary.averageCost || 0)}).`, color: '#EF4444' },
+                  { label: 'Risk Alert', text: anomalyCount > 0 ? `Detected ${anomalyCount} cost anomaly spike(s) on ${detectedAnomalies[0]?.dayLabel || 'recent dates'}.` : `No abnormal cost spikes detected in dataset.`, color: anomalyCount > 0 ? '#EF4444' : '#22C55E' },
                 ].map((item, i) => (
                   <div key={i} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: `2px solid ${item.color}` }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: item.color, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{item.label}</div>
@@ -422,22 +548,24 @@ export const DashboardPage = () => {
               </div>
             </div>
 
-            {/* Recent Alerts */}
-            <div className="glass-card" style={{ padding: '20px' }}>
+            {/* Recent Alerts (Clickable to Anomaly Detection) */}
+            <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => navigate('/anomalies')}>
               <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '14px', color: '#F1F5F9', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                Recent Alerts
-                <span className="badge-danger">{dynamicAlerts.length} Active</span>
+                <span>Recent Alerts</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#EF4444', fontWeight: 600 }}>
+                  View All <ArrowRight size={12} />
+                </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {dynamicAlerts.map(alert => (
-                  <div key={alert.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', background: 'rgba(255,255,255,0.025)', cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  <div key={alert.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 10px', borderRadius: '8px', background: 'rgba(255,255,255,0.025)', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
                   >
                     <SeverityBadge sev={alert.severity} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: '12px', color: '#CBD5E1', lineHeight: 1.4 }}>{alert.text}</p>
-                      <p style={{ margin: '3px 0 0', fontSize: '10.5px', color: '#475569' }}>{alert.time}</p>
+                      <p style={{ margin: '3px 0 0', fontSize: '10.5px', color: '#64748B' }}>{alert.time}</p>
                     </div>
                   </div>
                 ))}
@@ -456,8 +584,6 @@ export const DashboardPage = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontSize: '11px', color: '#475569' }}>{(file.recordCount || 0).toLocaleString()} rows</span>
-                      <span style={{ fontSize: '11px', color: '#334155' }}>·</span>
-                      <span style={{ fontSize: '11px', color: '#475569' }}>{relativeTime(file.uploadDate || file.createdAt)}</span>
                     </div>
                   </div>
                 )) : (
@@ -467,8 +593,13 @@ export const DashboardPage = () => {
             </div>
 
             {/* Recent Predictions */}
-            <div className="glass-card" style={{ padding: '20px' }}>
-              <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '14px', color: '#F1F5F9', marginBottom: '16px' }}>Recent Predictions</div>
+            <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => navigate('/predictions')}>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '14px', color: '#F1F5F9', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Recent Predictions</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#8B5CF6', fontWeight: 600 }}>
+                  View ML <ArrowRight size={12} />
+                </span>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {dynamicPredictions.map((pred, i) => (
                   <div key={i} style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}>
