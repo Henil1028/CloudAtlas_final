@@ -49,18 +49,41 @@ const uploadCSV = async (req, res) => {
       });
     }
 
-    const records = validation.records.map((r) => ({
-      ...r,
-      provider: (r.provider || provider).toLowerCase(),
-      uploadedBy: req.user._id,
-      uploadDate: new Date(),
-    }));
+    // Auto-detect provider from filename or record content
+    const fileName = (req.file.originalname || '').toLowerCase();
+    let detectedProv = (provider || 'aws').toLowerCase();
+    if (fileName.includes('azure') || fileName.includes('microsoft')) {
+      detectedProv = 'azure';
+    } else if (fileName.includes('gcp') || fileName.includes('google')) {
+      detectedProv = 'gcp';
+    } else if (fileName.includes('aws') || fileName.includes('amazon')) {
+      detectedProv = 'aws';
+    }
+
+    const records = validation.records.map((r) => {
+      let recProv = (r.provider || detectedProv).toLowerCase();
+      const strRec = JSON.stringify(r).toLowerCase();
+      if (strRec.includes('azure') || strRec.includes('microsoft') || strRec.includes('virtualmachines') || strRec.includes('blob')) {
+        recProv = 'azure';
+      } else if (strRec.includes('gcp') || strRec.includes('google') || strRec.includes('bigquery') || strRec.includes('compute')) {
+        recProv = 'gcp';
+      } else if (strRec.includes('aws') || strRec.includes('amazon') || strRec.includes('ec2') || strRec.includes('s3')) {
+        recProv = 'aws';
+      }
+
+      return {
+        ...r,
+        provider: recProv,
+        uploadedBy: req.user._id,
+        uploadDate: new Date(),
+      };
+    });
 
     // Store records in Database (or in-memory mock via Proxy insertMany)
     const savedRecords = await BillingData.insertMany(records);
 
     // Determine primary provider from saved records
-    const detectedPrimaryProvider = savedRecords[0]?.provider || provider.toLowerCase();
+    const detectedPrimaryProvider = savedRecords[0]?.provider || detectedProv;
 
     // Save File Upload history log
     const uploadedFile = await UploadedFile.create({

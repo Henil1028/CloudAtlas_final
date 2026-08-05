@@ -90,7 +90,11 @@ export const DatasetsPage = () => {
 
   const handleRunDataset = (ds) => {
     setRunningId(ds.id);
-    notifyUpload(ds.id);
+    const provKey = (ds.provider || 'aws').toLowerCase();
+    try {
+      localStorage.setItem('cloudatlas_active_provider', provKey);
+    } catch (e) {}
+    notifyUpload(ds.id, provKey);
     setTimeout(() => {
       setRunningId(null);
       navigate('/predictions');
