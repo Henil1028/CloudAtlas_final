@@ -47,18 +47,33 @@ export const UploadPage = () => {
 
   const autoDetectProvider = (fileObj) => {
     if (!fileObj) return;
+
+    // 1. Filename auto-detection
+    const fileName = (fileObj.name || '').toLowerCase();
+    if (fileName.includes('azure') || fileName.includes('microsoft')) {
+      setProvider('azure');
+      return;
+    } else if (fileName.includes('gcp') || fileName.includes('google')) {
+      setProvider('gcp');
+      return;
+    } else if (fileName.includes('aws') || fileName.includes('amazon')) {
+      setProvider('aws');
+      return;
+    }
+
+    // 2. CSV Content & Header auto-detection
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = (e.target.result || '').slice(0, 2000).toLowerCase();
-      if (text.includes('azure') || text.includes('microsoft') || text.includes('blob') || text.includes('virtual machines')) {
+      const text = (e.target?.result || '').toLowerCase();
+      if (text.includes('resourcegroup') || text.includes('metercategory') || text.includes('subscriptionid') || text.includes('azure') || text.includes('microsoft') || text.includes('virtualmachines')) {
         setProvider('azure');
-      } else if (text.includes('gcp') || text.includes('google') || text.includes('bigquery') || text.includes('compute engine')) {
+      } else if (text.includes('project_id') || text.includes('service_description') || text.includes('sku_description') || text.includes('gcp') || text.includes('google') || text.includes('bigquery')) {
         setProvider('gcp');
-      } else if (text.includes('aws') || text.includes('amazon') || text.includes('ec2') || text.includes('s3')) {
+      } else if (text.includes('lineitem') || text.includes('unblendedcost') || text.includes('productcode') || text.includes('aws') || text.includes('amazon') || text.includes('ec2') || text.includes('s3')) {
         setProvider('aws');
       }
     };
-    reader.readAsText(fileObj.slice(0, 3000));
+    reader.readAsText(fileObj);
   };
 
   const handleDrop = (e) => {
