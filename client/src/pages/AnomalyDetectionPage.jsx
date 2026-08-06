@@ -348,7 +348,7 @@ export const AnomalyDetectionPage = () => {
                     return (
                       <g key={index}>
                         <circle cx={cx} cy={cy} r="10" fill={dotColor} fillOpacity={0.25} />
-                        <circle cx={cx} cy={cy} r="5" fill={dotColor} stroke="#FFFFFF" strokeWidth={1.5} style={{ filter: `drop-shadow(0 0 8px ${dotColor})` }} />
+                        <circle cx={cx} cy={cy} r="5" fill={dotColor} stroke="#FFFFFF" strokeWidth={1.5} />
                       </g>
                     );
                   }

@@ -805,7 +805,7 @@ export const PredictionsPage = () => {
       <g style={{ cursor: 'pointer' }}>
         <circle cx={cx} cy={cy} r={12} fill="rgba(245,158,11,0.18)" />
         <circle cx={cx} cy={cy} r={7} fill="rgba(245,158,11,0.3)" stroke="#F59E0B" strokeWidth={1.5} />
-        <circle cx={cx} cy={cy} r={3.5} fill="#F59E0B" style={{ filter: 'drop-shadow(0 0 6px #F59E0B)' }} />
+        <circle cx={cx} cy={cy} r={3.5} fill="#F59E0B" />
       </g>
     );
   };
@@ -817,7 +817,7 @@ export const PredictionsPage = () => {
       <g style={{ cursor: 'pointer' }}>
         <circle cx={cx} cy={cy} r={12} fill="rgba(239,68,68,0.18)" />
         <circle cx={cx} cy={cy} r={7} fill="rgba(239,68,68,0.3)" stroke="#EF4444" strokeWidth={1.5} strokeDasharray="3 2" />
-        <circle cx={cx} cy={cy} r={3.5} fill="#EF4444" style={{ filter: 'drop-shadow(0 0 6px #EF4444)' }} />
+        <circle cx={cx} cy={cy} r={3.5} fill="#EF4444" />
       </g>
     );
   };

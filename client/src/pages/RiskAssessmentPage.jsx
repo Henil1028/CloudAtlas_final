@@ -81,7 +81,7 @@ const RiskGauge = ({ score }) => {
           strokeWidth="16"
           strokeLinecap="butt"
           strokeDasharray={`${(safeScore / 100) * arcLength} ${arcLength}`}
-          style={{ transition: 'stroke-dasharray 0.6s ease-out, stroke 0.4s ease', filter: `drop-shadow(0 0 8px ${color}A0)` }}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out, stroke 0.4s ease' }}
         />
         {/* Tick marks */}
         {[0, 25, 50, 75, 100].map((v, i) => {
@@ -112,13 +112,13 @@ const RiskGauge = ({ score }) => {
 
           return (
             <g style={{ transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-              <line x1="100" y1="100" x2={lx} y2={ly} stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.9))' }} />
+              <line x1="100" y1="100" x2={lx} y2={ly} stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
               {/* Triangular Arrow Head pointing directly onto score arc */}
-              <polygon points={`${p1} ${p2} ${p3}`} fill="#FFFFFF" stroke={color} strokeWidth="1.5" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
+              <polygon points={`${p1} ${p2} ${p3}`} fill="#FFFFFF" stroke={color} strokeWidth="1.5" />
             </g>
           );
         })()}
-        <circle cx="100" cy="100" r="6" fill="#F8FAFC" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.6))' }} />
+        <circle cx="100" cy="100" r="6" fill="#F8FAFC" />
         <circle cx="100" cy="100" r="2.5" fill="#0F172A" />
       </svg>
       <div style={{ position: 'absolute', bottom: '0px', left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
