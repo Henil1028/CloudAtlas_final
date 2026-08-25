@@ -21,6 +21,7 @@ export const UploadPage = () => {
 
   const [provider, setProvider] = useState('aws');
   const [file, setFile] = useState(null);
+  const [targetEmail, setTargetEmail] = useState('');
   const [dragActive, setDragActive] = useState(false);
 
   // Status states
@@ -30,6 +31,7 @@ export const UploadPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [success, setSuccess] = useState(false);
   const [insertedCount, setInsertedCount] = useState(0);
+  const [anomalySummary, setAnomalySummary] = useState(null);
 
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -109,6 +111,7 @@ export const UploadPage = () => {
 
   const resetStatuses = () => {
     setSuccess(false);
+    setAnomalySummary(null);
     setErrorMessage('');
     setErrorList([]);
     setProgress(0);
@@ -134,10 +137,14 @@ export const UploadPage = () => {
     setProgress(15);
     setErrorMessage('');
     setErrorList([]);
+    setAnomalySummary(null);
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('provider', provider);
+    if (targetEmail.trim()) {
+      formData.append('targetEmail', targetEmail.trim());
+    }
 
     try {
       setProgress(40);
@@ -154,6 +161,9 @@ export const UploadPage = () => {
       setProgress(100);
       setSuccess(true);
       setInsertedCount(response.data.recordsInserted);
+      if (response.data.anomalySummary) {
+        setAnomalySummary(response.data.anomalySummary);
+      }
 
       // Use the provider detected by server (reads actual CSV 'provider' column)
       const serverProvider = (response.data.file?.provider || provider).toLowerCase();
@@ -167,8 +177,8 @@ export const UploadPage = () => {
       notifyUpload(newFileId, serverProvider);
 
       setTimeout(() => {
-        navigate('/predictions');
-      }, 2000);
+        navigate('/anomalies');
+      }, 3500);
     } catch (err) {
       setProgress(0);
       const data = err.response?.data;
@@ -228,14 +238,47 @@ export const UploadPage = () => {
 
               {/* Status messages */}
               {success && (
-                <div className="mb-6 flex items-start gap-3 rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-green-400">
-                  <CheckCircle className="h-5.5 w-5.5 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-bold text-sm">Upload Ingestion Completed</h4>
-                    <p className="text-xs text-green-500/80 mt-1">
-                      Successfully parsed and stored **{insertedCount} records** inside the CloudAtlas forecasting databases.
-                    </p>
+                <div className="mb-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-5 text-emerald-400 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-6 w-6 shrink-0 mt-0.5 text-emerald-400" />
+                    <div>
+                      <h4 className="font-extrabold text-base text-white">Upload Ingestion Completed</h4>
+                      <p className="text-xs text-emerald-300 mt-1">
+                        Successfully parsed and stored <strong>{insertedCount} records</strong> in database.
+                      </p>
+                    </div>
                   </div>
+
+                  {anomalySummary && (
+                    <div className="pt-3 border-t border-emerald-500/20 space-y-3">
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-200">
+                        <span>🚨 Anomaly Email Notification Pushed</span>
+                        <span className="font-mono bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+                          {anomalySummary.notificationSentTo}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <div className="text-lg font-extrabold text-red-400">{anomalySummary.criticalCount}</div>
+                          <div className="text-[10px] text-red-300 uppercase font-semibold">Critical</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          <div className="text-lg font-extrabold text-amber-400">{anomalySummary.mediumCount}</div>
+                          <div className="text-[10px] text-amber-300 uppercase font-semibold">Medium</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          <div className="text-lg font-extrabold text-emerald-400">{anomalySummary.resolvedCount}</div>
+                          <div className="text-[10px] text-emerald-300 uppercase font-semibold">Resolved</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                          <div className="text-lg font-extrabold text-blue-400">{anomalySummary.remainingCount}</div>
+                          <div className="text-[10px] text-blue-300 uppercase font-semibold">Remaining</div>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-emerald-400/80 italic text-center">Redirecting to Live Anomaly Console...</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -287,6 +330,21 @@ export const UploadPage = () => {
                       <CheckCircle className="h-3 w-3" /> Auto-Fetched
                     </span>
                   )}
+                </div>
+
+                {/* Optional Custom Gmail Target for Anomaly Notification */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                    <span>📧 Push Anomaly Notification to Gmail:</span>
+                    <span className="text-[10px] text-gray-400 font-normal">(Optional - defaults to logged-in user Gmail)</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={targetEmail}
+                    onChange={(e) => setTargetEmail(e.target.value)}
+                    placeholder="Enter Gmail address (e.g. user@gmail.com)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#06B6D4] transition-colors"
+                  />
                 </div>
 
                 {/* Drag and Drop Zone */}

@@ -1,0 +1,121 @@
+date,service,cost,region,usage_type,provider
+2026-07-01,Amazon EKS,268.49,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-02,Amazon EC2,255.88,us-east-1,c5.4xlarge compute hours,aws
+2026-07-03,Google Kubernetes Engine,264.93,us-central1,GKE Cluster Nodes,gcp
+2026-07-04,Google Compute Engine,347.45,us-central1,n2-standard-8 compute,gcp
+2026-07-05,Google Cloud SQL,220.06,us-central1,db-custom-4-16000,gcp
+2026-07-06,Amazon DynamoDB,54.63,us-east-1,Provisioned Read/Write Units,aws
+2026-07-07,Azure Kubernetes Service,336.34,East US,AKS Worker Pool,azure
+2026-07-08,Azure Virtual Machines,285.42,East US,D8s v4 VM Instance,azure
+2026-07-09,AWS Lambda,22.15,us-east-1,Execution duration requests,aws
+2026-07-10,Amazon EKS,371.49,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-11,Google Kubernetes Engine,273.64,us-central1,GKE Cluster Nodes,gcp
+2026-07-12,Amazon EC2,277.87,us-east-1,c5.4xlarge compute hours,aws
+2026-07-13,Amazon DynamoDB,120.87,us-east-1,Provisioned Read/Write Units,aws
+2026-07-14,Amazon EC2,192.37,us-east-1,c5.4xlarge compute hours,aws
+2026-07-15,AWS Lambda,162.04,us-east-1,Execution duration requests,aws
+2026-07-16,Amazon DynamoDB,126.78,us-east-1,Provisioned Read/Write Units,aws
+2026-07-17,Amazon RDS,143.11,us-east-1,db.r5.2xlarge Multi-AZ,aws
+2026-07-18,Amazon EC2,442.61,us-east-1,c5.4xlarge compute hours,aws
+2026-07-19,Amazon EKS,180.89,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-20,Azure Kubernetes Service,335.14,East US,AKS Worker Pool,azure
+2026-07-21,Amazon DynamoDB,104.35,us-east-1,Provisioned Read/Write Units,aws
+2026-07-22,Google Cloud SQL,146.17,us-central1,db-custom-4-16000,gcp
+2026-07-23,Amazon S3,51.88,us-west-2,Standard Storage GB-mo,aws
+2026-07-24,AWS Lambda,29.69,us-east-1,Execution duration requests,aws
+2026-07-25,Amazon DynamoDB,63.37,us-east-1,Provisioned Read/Write Units,aws
+2026-07-26,Azure Blob Storage,37.49,West US,Hot LRS Storage,azure
+2026-07-27,Google Cloud Storage,68.71,us-west1,Standard Regional Bucket,gcp
+2026-07-28,Azure Cosmos DB,85.05,East US,Request Units (RU/s),azure
+2026-07-29,Amazon EC2,1298.98,us-east-1,c5.4xlarge compute hours,aws
+2026-07-30,Amazon EC2,360.36,us-east-1,c5.4xlarge compute hours,aws
+2026-07-01,Google Kubernetes Engine,161.39,us-central1,GKE Cluster Nodes,gcp
+2026-07-02,Amazon S3,79.74,us-west-2,Standard Storage GB-mo,aws
+2026-07-03,Amazon S3,33.03,us-west-2,Standard Storage GB-mo,aws
+2026-07-04,Azure Blob Storage,54.63,West US,Hot LRS Storage,azure
+2026-07-05,Amazon S3,57.56,us-west-2,Standard Storage GB-mo,aws
+2026-07-06,Amazon EC2,413.89,us-east-1,c5.4xlarge compute hours,aws
+2026-07-07,Azure Virtual Machines,304.7,East US,D8s v4 VM Instance,azure
+2026-07-08,Amazon EC2,420.79,us-east-1,c5.4xlarge compute hours,aws
+2026-07-09,Amazon EC2,420.78,us-east-1,c5.4xlarge compute hours,aws
+2026-07-10,Amazon RDS,126.43,us-east-1,db.r5.2xlarge Multi-AZ,aws
+2026-07-11,Azure SQL Database,287.4,East US 2,vCore General Purpose,azure
+2026-07-12,Amazon S3,25.11,us-west-2,Standard Storage GB-mo,aws
+2026-07-13,Amazon DynamoDB,379.16,us-east-1,Provisioned Read/Write Units,aws
+2026-07-14,Google Compute Engine,245.83,us-central1,n2-standard-8 compute,gcp
+2026-07-15,Azure SQL Database,138.0,East US 2,vCore General Purpose,azure
+2026-07-16,Azure Kubernetes Service,195.83,East US,AKS Worker Pool,azure
+2026-07-17,Amazon EC2,298.91,us-east-1,c5.4xlarge compute hours,aws
+2026-07-18,Amazon EKS,308.35,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-19,Google Cloud SQL,134.54,us-central1,db-custom-4-16000,gcp
+2026-07-20,Azure SQL Database,260.79,East US 2,vCore General Purpose,azure
+2026-07-21,Amazon EC2,428.78,us-east-1,c5.4xlarge compute hours,aws
+2026-07-22,Google BigQuery,146.02,us-multi,Analysis query scan GB,gcp
+2026-07-23,Amazon EKS,185.68,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-24,Azure Virtual Machines,202.18,East US,D8s v4 VM Instance,azure
+2026-07-25,Azure Cosmos DB,121.94,East US,Request Units (RU/s),azure
+2026-07-26,Azure SQL Database,112.67,East US 2,vCore General Purpose,azure
+2026-07-27,AWS Lambda,157.16,us-east-1,Execution duration requests,aws
+2026-07-28,Google BigQuery,114.5,us-multi,Analysis query scan GB,gcp
+2026-07-29,Amazon DynamoDB,60.25,us-east-1,Provisioned Read/Write Units,aws
+2026-07-30,Azure Blob Storage,62.48,West US,Hot LRS Storage,azure
+2026-07-01,Azure Cosmos DB,151.11,East US,Request Units (RU/s),azure
+2026-07-02,AWS Lambda,27.37,us-east-1,Execution duration requests,aws
+2026-07-03,Google Compute Engine,318.47,us-central1,n2-standard-8 compute,gcp
+2026-07-04,AWS Lambda,55.88,us-east-1,Execution duration requests,aws
+2026-07-05,Azure Virtual Machines,276.71,East US,D8s v4 VM Instance,azure
+2026-07-06,Google Cloud SQL,213.01,us-central1,db-custom-4-16000,gcp
+2026-07-07,Google Kubernetes Engine,288.89,us-central1,GKE Cluster Nodes,gcp
+2026-07-08,Azure Blob Storage,65.46,West US,Hot LRS Storage,azure
+2026-07-09,Amazon DynamoDB,110.93,us-east-1,Provisioned Read/Write Units,aws
+2026-07-10,Azure Cosmos DB,139.84,East US,Request Units (RU/s),azure
+2026-07-11,Amazon S3,258.94,us-west-2,Standard Storage GB-mo,aws
+2026-07-12,Azure Cosmos DB,103.08,East US,Request Units (RU/s),azure
+2026-07-13,Amazon EKS,212.56,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-14,Azure Blob Storage,73.73,West US,Hot LRS Storage,azure
+2026-07-15,Azure SQL Database,264.41,East US 2,vCore General Purpose,azure
+2026-07-16,Google BigQuery,151.29,us-multi,Analysis query scan GB,gcp
+2026-07-17,Amazon S3,55.32,us-west-2,Standard Storage GB-mo,aws
+2026-07-18,Azure Blob Storage,54.03,West US,Hot LRS Storage,azure
+2026-07-19,Amazon EC2,410.93,us-east-1,c5.4xlarge compute hours,aws
+2026-07-20,Amazon EKS,267.09,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-21,Amazon RDS,169.7,us-east-1,db.r5.2xlarge Multi-AZ,aws
+2026-07-22,Google BigQuery,257.28,us-multi,Analysis query scan GB,gcp
+2026-07-23,Amazon RDS,211.65,us-east-1,db.r5.2xlarge Multi-AZ,aws
+2026-07-24,AWS Lambda,28.09,us-east-1,Execution duration requests,aws
+2026-07-25,Amazon DynamoDB,428.79,us-east-1,Provisioned Read/Write Units,aws
+2026-07-26,Google Kubernetes Engine,296.43,us-central1,GKE Cluster Nodes,gcp
+2026-07-27,Azure Blob Storage,59.35,West US,Hot LRS Storage,azure
+2026-07-28,Amazon EC2,369.89,us-east-1,c5.4xlarge compute hours,aws
+2026-07-29,Google Compute Engine,213.75,us-central1,n2-standard-8 compute,gcp
+2026-07-30,Amazon S3,45.99,us-west-2,Standard Storage GB-mo,aws
+2026-07-01,Amazon EKS,219.35,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-02,Amazon EC2,223.0,us-east-1,c5.4xlarge compute hours,aws
+2026-07-03,Google BigQuery,252.21,us-multi,Analysis query scan GB,gcp
+2026-07-04,Google Cloud SQL,165.01,us-central1,db-custom-4-16000,gcp
+2026-07-05,Azure SQL Database,267.42,East US 2,vCore General Purpose,azure
+2026-07-06,Azure Virtual Machines,195.26,East US,D8s v4 VM Instance,azure
+2026-07-07,Google Cloud Storage,27.87,us-west1,Standard Regional Bucket,gcp
+2026-07-08,Amazon RDS,193.04,us-east-1,db.r5.2xlarge Multi-AZ,aws
+2026-07-09,Amazon DynamoDB,415.28,us-east-1,Provisioned Read/Write Units,aws
+2026-07-10,AWS Lambda,21.79,us-east-1,Execution duration requests,aws
+2026-07-11,Amazon EKS,244.17,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-12,Amazon RDS,166.72,us-east-1,db.r5.2xlarge Multi-AZ,aws
+2026-07-13,Azure Kubernetes Service,328.06,East US,AKS Worker Pool,azure
+2026-07-14,Amazon EC2,273.84,us-east-1,c5.4xlarge compute hours,aws
+2026-07-15,AWS Lambda,51.26,us-east-1,Execution duration requests,aws
+2026-07-16,Azure Cosmos DB,74.18,East US,Request Units (RU/s),azure
+2026-07-17,AWS Lambda,15.93,us-east-1,Execution duration requests,aws
+2026-07-18,Azure Blob Storage,22.81,West US,Hot LRS Storage,azure
+2026-07-19,Azure Kubernetes Service,258.88,East US,AKS Worker Pool,azure
+2026-07-20,Amazon EKS,173.29,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-21,Google BigQuery,213.77,us-multi,Analysis query scan GB,gcp
+2026-07-22,Amazon S3,40.18,us-west-2,Standard Storage GB-mo,aws
+2026-07-23,Amazon EC2,1086.61,us-east-1,c5.4xlarge compute hours,aws
+2026-07-24,Amazon EKS,246.83,us-east-1,Control Plane & Worker Nodes,aws
+2026-07-25,Google Cloud Storage,40.15,us-west1,Standard Regional Bucket,gcp
+2026-07-26,Azure Cosmos DB,73.47,East US,Request Units (RU/s),azure
+2026-07-27,Amazon DynamoDB,111.2,us-east-1,Provisioned Read/Write Units,aws
+2026-07-28,Google Cloud SQL,184.65,us-central1,db-custom-4-16000,gcp
+2026-07-29,AWS Lambda,22.12,us-east-1,Execution duration requests,aws
+2026-07-30,AWS Lambda,57.88,us-east-1,Execution duration requests,aws

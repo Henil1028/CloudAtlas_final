@@ -4,6 +4,7 @@ import { ConsoleLayout } from '../components/console/ConsoleLayout';
 import { PageHeader } from '../components/console/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import { useDataContext } from '../context/DataContext';
 
 const PROVIDER_COLORS = { AWS: '#F59E0B', Azure: '#3B82F6', GCP: '#22C55E', Oracle: '#EF4444' };
@@ -24,6 +25,8 @@ const fmtDate = (d) => {
 };
 
 export const DatasetsPage = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'admin';
   const [search, setSearch] = useState('');
   const [previewDs, setPreviewDs] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -198,9 +201,11 @@ export const DatasetsPage = () => {
               <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
               Refresh
             </button>
-            <button onClick={() => navigate('/upload')} className="btn-primary ripple">
-              + Upload New Dataset
-            </button>
+            {!isAdmin && (
+              <button onClick={() => navigate('/upload')} className="btn-primary ripple">
+                + Upload New Dataset
+              </button>
+            )}
           </div>
         }
       />
@@ -244,7 +249,7 @@ export const DatasetsPage = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}>
-                {['Dataset', 'Provider', 'Rows', 'Columns', 'Size', 'Uploaded', 'Status', 'Actions'].map(h => (
+                {['Dataset', 'Provider', 'Rows', 'Columns', 'Size', 'Uploaded', 'Status', ...(!isAdmin ? ['Actions'] : [])].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', color: '#475569', fontFamily: 'Inter', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -308,72 +313,74 @@ export const DatasetsPage = () => {
                       <span className="badge-danger"><XCircle size={9} /> Error</span>
                     )}
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        onClick={() => setPreviewDs(ds)}
-                        title="Preview"
-                        style={{
-                          width: '30px', height: '30px', borderRadius: '7px',
-                          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
-                          color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.2)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'}
-                      >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        title={lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id) ? "Currently Active Dataset" : "Run AI Models on this Dataset"}
-                        onClick={() => handleRunDataset(ds)}
-                        style={{
-                          width: '30px', height: '30px', borderRadius: '7px',
-                          background: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.15)' : 'rgba(124,58,237,0.1)',
-                          border: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(124,58,237,0.2)',
-                          color: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? '#22C55E' : '#8B5CF6',
-                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.25)' : 'rgba(124,58,237,0.2)'}
-                        onMouseLeave={e => e.currentTarget.style.background = (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.15)' : 'rgba(124,58,237,0.1)'}
-                      >
-                        {runningId === ds.id ? (
-                          <RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
-                        ) : (
-                          <Play size={13} />
-                        )}
-                      </button>
-                      <button
-                        title="Download CSV"
-                        onClick={() => handleDownloadDataset(ds)}
-                        style={{
-                          width: '30px', height: '30px', borderRadius: '7px',
-                          background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
-                          color: '#22C55E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,197,94,0.2)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(34,197,94,0.1)'}
-                      >
-                        <Download size={13} />
-                      </button>
-                      <button
-                        title="Delete"
-                        onClick={() => setDeleteId(ds.id)}
-                        style={{
-                          width: '30px', height: '30px', borderRadius: '7px',
-                          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)',
-                          color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
+                  {!isAdmin && (
+                    <td style={{ padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => setPreviewDs(ds)}
+                          title="Preview"
+                          style={{
+                            width: '30px', height: '30px', borderRadius: '7px',
+                            background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
+                            color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'}
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          title={lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id) ? "Currently Active Dataset" : "Run AI Models on this Dataset"}
+                          onClick={() => handleRunDataset(ds)}
+                          style={{
+                            width: '30px', height: '30px', borderRadius: '7px',
+                            background: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.15)' : 'rgba(124,58,237,0.1)',
+                            border: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(124,58,237,0.2)',
+                            color: (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? '#22C55E' : '#8B5CF6',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.25)' : 'rgba(124,58,237,0.2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = (lastUploadFileId === ds.id || (!lastUploadFileId && datasets[0]?.id === ds.id)) ? 'rgba(34,197,94,0.15)' : 'rgba(124,58,237,0.1)'}
+                        >
+                          {runningId === ds.id ? (
+                            <RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
+                          ) : (
+                            <Play size={13} />
+                          )}
+                        </button>
+                        <button
+                          title="Download CSV"
+                          onClick={() => handleDownloadDataset(ds)}
+                          style={{
+                            width: '30px', height: '30px', borderRadius: '7px',
+                            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
+                            color: '#22C55E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,197,94,0.2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(34,197,94,0.1)'}
+                        >
+                          <Download size={13} />
+                        </button>
+                        <button
+                          title="Delete"
+                          onClick={() => setDeleteId(ds.id)}
+                          style={{
+                            width: '30px', height: '30px', borderRadius: '7px',
+                            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)',
+                            color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

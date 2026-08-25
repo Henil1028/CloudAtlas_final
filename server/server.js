@@ -107,29 +107,25 @@ connectDB().then(async () => {
     console.error('❌ Failed to seed Super Admin 1:', error.message);
   }
 
-  // Seed Super Admin 2: Neel Panchal
+  // Seed Sample Platform Accounts
   try {
     const User = require('./models/User');
-    let neelUser = await User.findOne({ email: 'npanchal1812@gmail.com' });
-    if (!neelUser) {
-      await User.create({
-        name: 'Neel Panchal',
-        email: 'npanchal1812@gmail.com',
-        phoneNumber: '9876543211',
-        password: 'Neel#1812',
-        role: 'super_admin',
-        isActive: true,
-      });
-      console.log('👤 Seeded Super Admin: npanchal1812@gmail.com');
-    } else {
-      neelUser.password = 'Neel#1812';
-      neelUser.role = 'super_admin';
-      neelUser.isActive = true;
-      await neelUser.save();
-      console.log('👤 Synchronized Super Admin credentials for: npanchal1812@gmail.com');
+    const sampleUsers = [
+      { name: 'Alex Vance', email: 'devops@cloudatlas.io', phoneNumber: '9876543212', password: 'DemoPass123!', role: 'admin', isActive: true },
+      { name: 'Sarah Chen', email: 'sarah.chen@finops.io', phoneNumber: '9876543213', password: 'DemoPass123!', role: 'user', isActive: true },
+      { name: 'Marcus Wright', email: 'marcus.wright@cloudatlas.ai', phoneNumber: '9876543214', password: 'DemoPass123!', role: 'user', isActive: true },
+      { name: 'Elena Rostova', email: 'elena.rostova@cloudatlas.ai', phoneNumber: '9876543215', password: 'DemoPass123!', role: 'admin', isActive: true }
+    ];
+
+    for (const u of sampleUsers) {
+      const exists = await User.findOne({ email: u.email });
+      if (!exists) {
+        await User.create(u);
+        console.log(`👤 Seeded sample platform account: ${u.email}`);
+      }
     }
   } catch (error) {
-    console.error('❌ Failed to seed Super Admin 2:', error.message);
+    console.error('❌ Failed to seed sample users:', error.message);
   }
 
   // Seed Mock Billing Data and Files if collection is empty

@@ -27,7 +27,11 @@ export const AuthPage = ({ initialMode = 'login' }) => {
     } else if (location.pathname === '/login') {
       setMode('login');
     }
-  }, [location.pathname]);
+    const params = new URLSearchParams(location.search);
+    if (params.get('expired') === 'true') {
+      setLocalError('Your 2-hour login session has expired. Please log in again.');
+    }
+  }, [location.pathname, location.search]);
 
   const handleModeSwitch = (newMode) => {
     if (newMode === mode) return;
@@ -137,9 +141,8 @@ export const AuthPage = ({ initialMode = 'login' }) => {
 
     try {
       const user = await login(email, password);
-      if (user && user.role === 'super_admin') {
-        if (logout) logout();
-        setLocalError('Super Admin accounts must use the dedicated Super Admin Portal (/admin/login).');
+      if (user && (user.role === 'super_admin' || user.role === 'admin')) {
+        navigate('/admin/dashboard', { replace: true });
         return;
       }
       setEmail('');

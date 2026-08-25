@@ -1,0 +1,81 @@
+date,service,cost,region,usage_type,provider
+2026-07-01,Google Kubernetes Engine,146.16,us-central1,GKE Cluster Nodes,gcp
+2026-07-02,Azure Virtual Machines,300.84,East US,D8s v4 VM Instance,azure
+2026-07-03,Amazon S3,81.11,us-west-2,Standard Storage GB-mo,aws
+2026-07-04,Azure Virtual Machines,318.39,East US,D8s v4 VM Instance,azure
+2026-07-05,Azure Blob Storage,32.03,West US,Hot LRS Storage,azure
+2026-07-06,Azure Virtual Machines,270.41,East US,D8s v4 VM Instance,azure
+2026-07-07,Azure Virtual Machines,246.14,East US,D8s v4 VM Instance,azure
+2026-07-08,Azure SQL Database,177.17,East US 2,vCore General Purpose,azure
+2026-07-09,Azure SQL Database,246.9,East US 2,vCore General Purpose,azure
+2026-07-10,Azure Cosmos DB,55.03,East US,Request Units (RU/s),azure
+2026-07-11,Azure Kubernetes Service,265.78,East US,AKS Worker Pool,azure
+2026-07-12,Azure Cosmos DB,114.61,East US,Request Units (RU/s),azure
+2026-07-13,Azure Kubernetes Service,168.23,East US,AKS Worker Pool,azure
+2026-07-14,Azure SQL Database,111.27,East US 2,vCore General Purpose,azure
+2026-07-15,Azure Kubernetes Service,922.34,East US,AKS Worker Pool,azure
+2026-07-16,Azure SQL Database,157.73,East US 2,vCore General Purpose,azure
+2026-07-17,Azure Kubernetes Service,297.81,East US,AKS Worker Pool,azure
+2026-07-18,Azure Cosmos DB,104.13,East US,Request Units (RU/s),azure
+2026-07-19,Azure SQL Database,168.6,East US 2,vCore General Purpose,azure
+2026-07-20,Azure SQL Database,183.79,East US 2,vCore General Purpose,azure
+2026-07-21,Azure Blob Storage,37.91,West US,Hot LRS Storage,azure
+2026-07-22,Azure Blob Storage,43.36,West US,Hot LRS Storage,azure
+2026-07-23,Amazon EC2,362.06,us-east-1,c5.4xlarge compute hours,aws
+2026-07-24,Google Kubernetes Engine,214.12,us-central1,GKE Cluster Nodes,gcp
+2026-07-25,Azure Cosmos DB,75.78,East US,Request Units (RU/s),azure
+2026-07-26,Azure Kubernetes Service,144.9,East US,AKS Worker Pool,azure
+2026-07-27,AWS Lambda,29.93,us-east-1,Execution duration requests,aws
+2026-07-28,Azure Blob Storage,47.13,West US,Hot LRS Storage,azure
+2026-07-29,Azure SQL Database,677.74,East US 2,vCore General Purpose,azure
+2026-07-30,Azure Kubernetes Service,302.2,East US,AKS Worker Pool,azure
+2026-07-01,Azure Blob Storage,44.55,West US,Hot LRS Storage,azure
+2026-07-02,Azure Virtual Machines,256.09,East US,D8s v4 VM Instance,azure
+2026-07-03,Azure Blob Storage,45.74,West US,Hot LRS Storage,azure
+2026-07-04,Azure Virtual Machines,224.73,East US,D8s v4 VM Instance,azure
+2026-07-05,Azure Cosmos DB,125.18,East US,Request Units (RU/s),azure
+2026-07-06,Azure Virtual Machines,342.16,East US,D8s v4 VM Instance,azure
+2026-07-07,Azure SQL Database,223.3,East US 2,vCore General Purpose,azure
+2026-07-08,Azure Virtual Machines,401.07,East US,D8s v4 VM Instance,azure
+2026-07-09,Azure SQL Database,254.51,East US 2,vCore General Purpose,azure
+2026-07-10,Azure Kubernetes Service,212.56,East US,AKS Worker Pool,azure
+2026-07-11,Google Compute Engine,286.01,us-central1,n2-standard-8 compute,gcp
+2026-07-12,Amazon S3,53.59,us-west-2,Standard Storage GB-mo,aws
+2026-07-13,Amazon S3,213.42,us-west-2,Standard Storage GB-mo,aws
+2026-07-14,Azure SQL Database,207.98,East US 2,vCore General Purpose,azure
+2026-07-15,Azure SQL Database,216.49,East US 2,vCore General Purpose,azure
+2026-07-16,Azure Kubernetes Service,229.29,East US,AKS Worker Pool,azure
+2026-07-17,Azure Virtual Machines,200.44,East US,D8s v4 VM Instance,azure
+2026-07-18,Azure Kubernetes Service,274.62,East US,AKS Worker Pool,azure
+2026-07-19,Azure SQL Database,274.2,East US 2,vCore General Purpose,azure
+2026-07-20,Azure Cosmos DB,80.89,East US,Request Units (RU/s),azure
+2026-07-21,Azure Blob Storage,48.58,West US,Hot LRS Storage,azure
+2026-07-22,Azure Virtual Machines,306.26,East US,D8s v4 VM Instance,azure
+2026-07-23,Azure SQL Database,137.77,East US 2,vCore General Purpose,azure
+2026-07-24,Azure Virtual Machines,370.23,East US,D8s v4 VM Instance,azure
+2026-07-25,Amazon S3,67.29,us-west-2,Standard Storage GB-mo,aws
+2026-07-26,Azure Virtual Machines,294.35,East US,D8s v4 VM Instance,azure
+2026-07-27,Azure SQL Database,702.01,East US 2,vCore General Purpose,azure
+2026-07-28,Azure Virtual Machines,403.32,East US,D8s v4 VM Instance,azure
+2026-07-29,Azure Blob Storage,64.94,West US,Hot LRS Storage,azure
+2026-07-30,Azure Blob Storage,23.83,West US,Hot LRS Storage,azure
+2026-07-01,Azure Cosmos DB,70.1,East US,Request Units (RU/s),azure
+2026-07-02,Azure SQL Database,121.46,East US 2,vCore General Purpose,azure
+2026-07-03,Azure Blob Storage,67.87,West US,Hot LRS Storage,azure
+2026-07-04,Azure SQL Database,255.56,East US 2,vCore General Purpose,azure
+2026-07-05,Azure Kubernetes Service,230.1,East US,AKS Worker Pool,azure
+2026-07-06,Azure Kubernetes Service,151.14,East US,AKS Worker Pool,azure
+2026-07-07,Azure Cosmos DB,96.74,East US,Request Units (RU/s),azure
+2026-07-08,Google Cloud Storage,45.12,us-west1,Standard Regional Bucket,gcp
+2026-07-09,Azure Cosmos DB,145.03,East US,Request Units (RU/s),azure
+2026-07-10,Azure Blob Storage,73.3,West US,Hot LRS Storage,azure
+2026-07-11,Azure SQL Database,642.56,East US 2,vCore General Purpose,azure
+2026-07-12,Azure Cosmos DB,124.23,East US,Request Units (RU/s),azure
+2026-07-13,Azure SQL Database,178.68,East US 2,vCore General Purpose,azure
+2026-07-14,Amazon DynamoDB,103.59,us-east-1,Provisioned Read/Write Units,aws
+2026-07-15,Azure Kubernetes Service,317.29,East US,AKS Worker Pool,azure
+2026-07-16,Google Cloud Storage,26.68,us-west1,Standard Regional Bucket,gcp
+2026-07-17,Azure Cosmos DB,146.16,East US,Request Units (RU/s),azure
+2026-07-18,Azure Kubernetes Service,207.47,East US,AKS Worker Pool,azure
+2026-07-19,Azure Kubernetes Service,301.41,East US,AKS Worker Pool,azure
+2026-07-20,Azure Cosmos DB,51.37,East US,Request Units (RU/s),azure

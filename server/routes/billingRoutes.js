@@ -13,6 +13,7 @@ const {
   getProviders,
   getUploadedFiles,
   deleteUploadedFile,
+  notifyAnomalies,
 } = require('../controllers/billingController');
 
 // All routes here require active user authentication session
@@ -27,6 +28,9 @@ router.get('/services', getServices);
 router.get('/files', getUploadedFiles);
 router.delete('/files/:id', deleteUploadedFile);
 
+// Anomaly push notification manual trigger route
+router.post('/notify-anomalies', notifyAnomalies);
+
 // General data list routes
 router.get('/', getBillingData);
 router.get('/:id', getBillingDetail);
@@ -38,3 +42,4 @@ router.post('/upload', authorize('super_admin', 'admin', 'user'), uploadLimiter,
 router.delete('/:id', authorize('super_admin'), deleteBillingRecord);
 
 module.exports = router;
+

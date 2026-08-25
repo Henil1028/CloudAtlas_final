@@ -30,11 +30,13 @@ api.interceptors.response.use(
       if (error.response.status === 401) {
         localStorage.removeItem('cloudatlas_token');
         localStorage.removeItem('cloudatlas_user');
+        localStorage.removeItem('cloudatlas_login_expires');
         
         // Only redirect if we are not already on login or landing pages
         const currentPath = window.location.pathname;
-        if (currentPath !== '/login' && currentPath !== '/') {
-          window.location.href = '/login';
+        if (currentPath !== '/login' && currentPath !== '/admin/login' && currentPath !== '/') {
+          const targetLogin = currentPath.startsWith('/admin') ? '/admin/login' : '/login';
+          window.location.href = `${targetLogin}?expired=true`;
         }
       } else if (error.response.status === 502 || error.response.status === 504) {
         error.message = 'Backend server timeout or connection error (502). Please check Node backend at port 5000.';

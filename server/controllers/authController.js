@@ -6,21 +6,26 @@ const bcrypt = require('bcryptjs');
 
 // Configure email transporter
 const getTransporter = async () => {
-  // If SMTP user is provided and it's a Gmail address or service is gmail
+  const cleanPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+
   if (process.env.SMTP_SERVICE === 'gmail' || (process.env.SMTP_USER && process.env.SMTP_USER.includes('gmail.com'))) {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS, // App Password
+        pass: cleanPass,
       },
-      connectionTimeout: 4000,
-      greetingTimeout: 3000,
-      socketTimeout: 5000,
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 8000,
+      socketTimeout: 15000,
     });
   }
 
-  // If SMTP config is provided in env, use it
   if (process.env.SMTP_HOST && process.env.SMTP_USER) {
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -28,11 +33,11 @@ const getTransporter = async () => {
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        pass: cleanPass,
       },
-      connectionTimeout: 4000,
-      greetingTimeout: 3000,
-      socketTimeout: 5000,
+      connectionTimeout: 10000,
+      greetingTimeout: 8000,
+      socketTimeout: 15000,
     });
   }
 

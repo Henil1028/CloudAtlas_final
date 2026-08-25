@@ -348,6 +348,9 @@ router.get('/migration-intelligence', analyticsLimiter, async (req, res) => {
     const activeProviders = Object.entries(providerTotals).filter(([, v]) => v > 0);
     activeProviders.sort((a, b) => b[1] - a[1]);
 
+    const activeProvidersList = activeProviders.map(p => p[0]);
+    const isSingleCloud = activeProvidersList.length <= 1;
+
     const currentProvider = activeProviders.length > 0 ? activeProviders[0][0] : 'aws';
     const currentMonthlySpend = round2(providerTotals[currentProvider]);
 
@@ -361,6 +364,9 @@ router.get('/migration-intelligence', analyticsLimiter, async (req, res) => {
       const rate = COMPUTE_DISCOUNT[p];
       if (rate < lowestRate) { lowestRate = rate; recommendedProvider = p; }
     });
+
+    // If single cloud in CSV, activeProviders is only that 1 cloud; if multi-cloud, all detected clouds
+    const displayProviders = isSingleCloud ? activeProvidersList : activeProvidersList;
 
     const targetMonthlySpend = round2(currentMonthlySpend * COMPUTE_DISCOUNT[recommendedProvider]);
     const monthlySavings = round2(currentMonthlySpend - targetMonthlySpend);
@@ -402,6 +408,9 @@ router.get('/migration-intelligence', analyticsLimiter, async (req, res) => {
     return res.json({
       totalRecords: records.length,
       totalCost: round2(totalCost),
+      isSingleCloud,
+      detectedCloudsCount: activeProvidersList.length,
+      activeProviders: displayProviders,
       currentProvider: currentProvider.toUpperCase(),
       currentProviderName: providerName[currentProvider] || currentProvider,
       recommendedProvider: recommendedProvider.toUpperCase(),
@@ -416,7 +425,6 @@ router.get('/migration-intelligence', analyticsLimiter, async (req, res) => {
       roi_pct: 356,
       scores,
       top_services: topServices,
-      top_regions: topRegions,
       workloads,
       provider_spend: providerTotals,
       source: 'mongodb_live',

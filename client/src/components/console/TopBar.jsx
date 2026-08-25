@@ -236,34 +236,36 @@ export const TopBar = ({ onMenuClick, title = 'Dashboard', collapsed }) => {
       {/* Right: Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
 
-        {/* Upload CSV */}
-        <button
-          onClick={() => navigate('/upload')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '7px 14px', borderRadius: '8px',
-            background: 'rgba(124,58,237,0.15)',
-            border: '1px solid rgba(124,58,237,0.25)',
-            color: '#8B5CF6', cursor: 'pointer',
-            fontSize: '12.5px', fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
-            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(124,58,237,0.25)';
-            e.currentTarget.style.boxShadow = '0 0 16px rgba(124,58,237,0.3)';
-            e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(124,58,237,0.15)';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          }}
-        >
-          <Upload size={13} />
-          <span className="hidden sm:inline">Upload CSV</span>
-        </button>
+        {/* Upload CSV (Hidden for Admin users) */}
+        {!(user?.role === 'super_admin' || user?.role === 'admin') && (
+          <button
+            onClick={() => navigate('/upload')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '7px 14px', borderRadius: '8px',
+              background: 'rgba(124,58,237,0.15)',
+              border: '1px solid rgba(124,58,237,0.25)',
+              color: '#8B5CF6', cursor: 'pointer',
+              fontSize: '12.5px', fontWeight: 600,
+              fontFamily: 'Inter, sans-serif',
+              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(124,58,237,0.25)';
+              e.currentTarget.style.boxShadow = '0 0 16px rgba(124,58,237,0.3)';
+              e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(124,58,237,0.15)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+            }}
+          >
+            <Upload size={13} />
+            <span className="hidden sm:inline">Upload CSV</span>
+          </button>
+        )}
 
 
 

@@ -50,9 +50,9 @@ router.post('/verify-otp', authLimiter, verifyOtp);
 router.get('/profile', protect, getProfile);
 
 // Admin User CRUD routes
-router.get('/users', protect, authorize('super_admin'), getAllUsers);
-router.post('/users', protect, authorize('super_admin'), createUser);
-router.put('/users/:id', protect, authorize('super_admin'), updateUser);
-router.delete('/users/:id', protect, authorize('super_admin'), deleteUser);
+router.get('/users', protect, authorize('super_admin', 'admin'), getAllUsers);
+router.post('/users', protect, authorize('super_admin', 'admin'), createUser);
+router.put('/users/:id', protect, authorize('super_admin', 'admin'), updateUser);
+router.delete('/users/:id', protect, authorize('super_admin', 'admin'), deleteUser);
 
 module.exports = router;

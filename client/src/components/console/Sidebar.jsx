@@ -3,47 +3,69 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, TrendingUp, BarChart3, Sliders, ShieldAlert,
   Zap, Bot, Database, FileText, Settings, ChevronLeft, ChevronRight,
-  Activity, Sparkles, Menu, X, ArrowRightLeft
+  Activity, Sparkles, Menu, X, ArrowRightLeft, Shield, Users
 } from 'lucide-react';
-
-const NAV_SECTIONS = [
-  {
-    label: 'Main',
-    items: [
-      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    ]
-  },
-  {
-    label: 'AI Models',
-    items: [
-      { name: 'Cost Prediction', path: '/predictions', icon: TrendingUp },
-      { name: 'Budget Simulator', path: '/simulator', icon: Sliders },
-      { name: 'Risk Classification', path: '/risk-assessment', icon: ShieldAlert },
-      { name: 'Anomaly Detection', path: '/anomalies', icon: Zap },
-      { name: 'Migration Intelligence', path: '/migration-intelligence', icon: ArrowRightLeft },
-      { name: 'AI Insight Engine', path: '/insights', icon: Bot },
-    ]
-  },
-  {
-    label: 'Data',
-    items: [
-      { name: 'Datasets', path: '/datasets', icon: Database },
-      { name: 'Reports', path: '/reports', icon: FileText },
-      { name: 'Upload CSV', path: '/upload', icon: Activity },
-    ]
-  },
-  {
-    label: 'Account',
-    items: [
-      { name: 'Settings', path: '/settings', icon: Settings },
-    ]
-  }
-];
+import { useAuth } from '../../hooks/useAuth';
 
 export const Sidebar = ({ mobileOpen, onMobileClose, collapsed, onCollapseToggle }) => {
   const location = useLocation();
+  const { user } = useAuth();
 
   const isActive = (path) => location.pathname === path;
+
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'admin';
+
+  const navSections = isAdmin ? [
+    {
+      label: 'Admin Control',
+      items: [
+        { name: 'Admin Dashboard', path: '/admin/dashboard', icon: Shield },
+        { name: 'User Management', path: '/users', icon: Users },
+      ]
+    },
+    {
+      label: 'Data',
+      items: [
+        { name: 'Datasets', path: '/datasets', icon: Database },
+      ]
+    },
+    {
+      label: 'Account',
+      items: [
+        { name: 'Settings', path: '/settings', icon: Settings },
+      ]
+    }
+  ] : [
+    {
+      label: 'Main',
+      items: [
+        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      ]
+    },
+    {
+      label: 'AI Models',
+      items: [
+        { name: 'Cost Prediction', path: '/predictions', icon: TrendingUp },
+        { name: 'Budget Simulator', path: '/simulator', icon: Sliders },
+        { name: 'Risk Classification', path: '/risk-assessment', icon: ShieldAlert },
+        { name: 'Anomaly Detection', path: '/anomalies', icon: Zap },
+        { name: 'Migration Intelligence', path: '/migration-intelligence', icon: ArrowRightLeft },
+        { name: 'AI Insight Engine', path: '/insights', icon: Bot },
+      ]
+    },
+    {
+      label: 'Data',
+      items: [
+        { name: 'Datasets', path: '/datasets', icon: Database },
+      ]
+    },
+    {
+      label: 'Account',
+      items: [
+        { name: 'Settings', path: '/settings', icon: Settings },
+      ]
+    }
+  ];
 
   return (
     <>
@@ -120,7 +142,7 @@ export const Sidebar = ({ mobileOpen, onMobileClose, collapsed, onCollapseToggle
 
         {/* Navigation */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 0', overflowX: 'hidden' }}>
-          {NAV_SECTIONS.map((section, si) => (
+          {navSections.map((section, si) => (
             <div key={si} style={{ marginBottom: '4px' }}>
               {!collapsed && (
                 <div style={{

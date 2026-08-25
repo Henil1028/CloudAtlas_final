@@ -4,7 +4,14 @@ import { loginUser, registerUser, getProfile, verifyRegistrationUser, resendRegi
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('cloudatlas_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [token, setToken] = useState(localStorage.getItem('cloudatlas_token'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,9 +22,21 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('console-theme', newTheme);
   };
 
+  const TWO_HOURS_MS = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+  // Helper to establish 2-hour session expiration timestamp
+  const recordSessionStart = () => {
+    const expiresAt = Date.now() + TWO_HOURS_MS;
+    localStorage.setItem('cloudatlas_login_expires', expiresAt.toString());
+  };
+
   useEffect(() => {
     const initializeAuth = async () => {
       if (token) {
+        // If token exists but no expiry recorded, record 2 hours from now
+        if (!localStorage.getItem('cloudatlas_login_expires')) {
+          recordSessionStart();
+        }
         try {
           const profile = await getProfile();
           setUser(profile);
@@ -33,6 +52,32 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, [token]);
 
+  // Automatic 2-hour session expiration monitoring timer
+  useEffect(() => {
+    const checkSessionExpiration = () => {
+      const savedToken = localStorage.getItem('cloudatlas_token');
+      const expiresAtStr = localStorage.getItem('cloudatlas_login_expires');
+
+      if (savedToken && expiresAtStr) {
+        const expiresAt = parseInt(expiresAtStr, 10);
+        if (!isNaN(expiresAt) && Date.now() >= expiresAt) {
+          console.warn('⏰ 2-Hour User Session Expired. Automatically logging out user...');
+          logout();
+          const currentPath = window.location.pathname;
+          const targetLogin = currentPath.startsWith('/admin') ? '/admin/login' : '/login';
+          window.location.href = `${targetLogin}?expired=true`;
+        }
+      }
+    };
+
+    // Run check on mount
+    checkSessionExpiration();
+
+    // Monitor session expiry every 5 seconds
+    const intervalId = setInterval(checkSessionExpiration, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
@@ -45,6 +90,7 @@ export const AuthProvider = ({ children }) => {
         email: data.email,
         role: data.role,
       }));
+      recordSessionStart();
       setToken(data.token);
       setUser({
         _id: data._id,
@@ -78,6 +124,7 @@ export const AuthProvider = ({ children }) => {
         phoneNumber: data.phoneNumber,
         role: data.role,
       }));
+      recordSessionStart();
       setToken(data.token);
       setUser({
         _id: data._id,
@@ -109,6 +156,7 @@ export const AuthProvider = ({ children }) => {
         phoneNumber: data.phoneNumber,
         role: data.role,
       }));
+      recordSessionStart();
       setToken(data.token);
       setUser({
         _id: data._id,
@@ -145,6 +193,7 @@ export const AuthProvider = ({ children }) => {
   const logout = (navigateFn) => {
     localStorage.removeItem('cloudatlas_token');
     localStorage.removeItem('cloudatlas_user');
+    localStorage.removeItem('cloudatlas_login_expires');
     setToken(null);
     setUser(null);
     setError(null);

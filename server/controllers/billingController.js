@@ -4,17 +4,18 @@ const BillingData = require('../models/BillingData');
 const UploadedFile = require('../models/UploadedFile');
 const AuditLog = require('../models/AuditLog');
 const { validateBillingCSV } = require('../utils/billingValidator');
+const { analyzeAnomalies, sendAnomalyNotificationEmail } = require('../utils/emailNotifier');
 
 // @desc    Upload billing CSV
 // @route   POST /api/billing/upload
-// @access  Private (Super Admin)
+// @access  Private (Super Admin, Admin, User)
 const uploadCSV = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Please upload a CSV file' });
     }
 
-    let { provider } = req.body;
+    let { provider, targetEmail } = req.body;
     const lowerName = req.file.originalname.toLowerCase();
     
     // Override with filename hint only if filename explicitly names a provider
@@ -127,6 +128,20 @@ const uploadCSV = async (req, res) => {
     // Delete temp file after storing
     fs.unlinkSync(req.file.path);
 
+    // ── Analyze Anomalies in Uploaded Dataset ────────────────────────────
+    const anomalyAnalysis = analyzeAnomalies(savedRecords);
+
+    // ── Send Email Notification to User's Gmail ─────────────────────────
+    const recipientEmail = targetEmail || req.user.email;
+    sendAnomalyNotificationEmail({
+      userEmail: recipientEmail,
+      userName: req.user.name,
+      fileName: req.file.originalname,
+      provider: detectedPrimaryProvider,
+      recordCount: savedRecords.length,
+      analysis: anomalyAnalysis,
+    }).catch(err => console.error('⚠️  Anomaly push email skipped:', err.message));
+
     // ── Background ML Retrain (non-blocking) ──────────────────────────────
     // Fire-and-forget: trigger Django to retrain models on the new dataset
     const authHeader = req.headers['authorization'];
@@ -143,6 +158,14 @@ const uploadCSV = async (req, res) => {
       message: 'Billing data uploaded and validated successfully',
       file: uploadedFile,
       recordsInserted: savedRecords.length,
+      anomalySummary: {
+        criticalCount: anomalyAnalysis.criticalCount,
+        mediumCount: anomalyAnalysis.mediumCount,
+        resolvedCount: anomalyAnalysis.resolvedCount,
+        remainingCount: anomalyAnalysis.remainingCount,
+        totalAnomalies: anomalyAnalysis.totalAnomalies,
+        notificationSentTo: recipientEmail,
+      },
     });
   } catch (error) {
     console.error('Upload Error:', error);
@@ -508,20 +531,81 @@ const deleteUploadedFile = async (req, res) => {
     // Cascade: remove all billing records associated with this file's ID
     await BillingData.deleteMany({ fileId: fileRecord._id });
 
-    // Log deletion
-    await AuditLog.create({
-      user: req.user.email,
-      ipAddress: req.ip || req.connection.remoteAddress || '127.0.0.1',
-      action: 'Dataset Deleted',
-      fileName: fileRecord.filename,
-      provider: fileRecord.provider,
-      recordCount: fileRecord.recordCount,
-    });
-
     res.json({ message: 'Dataset and all associated billing records removed', id: req.params.id });
   } catch (error) {
     console.error('Delete File Error:', error);
     res.status(500).json({ message: 'Server error deleting dataset' });
+  }
+};
+
+// @desc    Manually push anomaly email notification for a dataset to specified Gmail
+// @route   POST /api/billing/notify-anomalies
+// @access  Private
+const notifyAnomalies = async (req, res) => {
+  try {
+    const { fileId, targetEmail } = req.body;
+    const recipientEmail = targetEmail || req.user.email;
+
+    let filter = {};
+    let fileInfo = { filename: 'Latest Dataset', provider: 'multi-cloud', recordCount: 0 };
+
+    if (fileId) {
+      const fileRecord = await UploadedFile.findById(fileId);
+      if (fileRecord) {
+        filter = { fileId: fileRecord._id };
+        fileInfo = {
+          filename: fileRecord.filename,
+          provider: fileRecord.provider,
+          recordCount: fileRecord.recordCount,
+        };
+      }
+    } else {
+      const latestFile = await UploadedFile.findOne({ uploadedBy: req.user._id }).sort({ createdAt: -1 });
+      if (latestFile) {
+        filter = { fileId: latestFile._id };
+        fileInfo = {
+          filename: latestFile.filename,
+          provider: latestFile.provider,
+          recordCount: latestFile.recordCount,
+        };
+      }
+    }
+
+    const records = await BillingData.find(filter);
+    if (records.length === 0) {
+      return res.status(404).json({ message: 'No billing records found to analyze for anomalies' });
+    }
+
+    fileInfo.recordCount = records.length;
+    const anomalyAnalysis = analyzeAnomalies(records);
+
+    const sent = await sendAnomalyNotificationEmail({
+      userEmail: recipientEmail,
+      userName: req.user.name,
+      fileName: fileInfo.filename,
+      provider: fileInfo.provider,
+      recordCount: fileInfo.recordCount,
+      analysis: anomalyAnalysis,
+    });
+
+    if (sent) {
+      return res.json({
+        message: `Anomaly push notification delivered to ${recipientEmail}`,
+        recipientEmail,
+        anomalySummary: {
+          criticalCount: anomalyAnalysis.criticalCount,
+          mediumCount: anomalyAnalysis.mediumCount,
+          resolvedCount: anomalyAnalysis.resolvedCount,
+          remainingCount: anomalyAnalysis.remainingCount,
+          totalAnomalies: anomalyAnalysis.totalAnomalies,
+        },
+      });
+    } else {
+      return res.status(500).json({ message: 'Failed to send email via SMTP transporter. Check SMTP credentials.' });
+    }
+  } catch (error) {
+    console.error('Notify Anomalies Error:', error);
+    res.status(500).json({ message: 'Server error triggering anomaly notification' });
   }
 };
 
@@ -535,4 +619,6 @@ module.exports = {
   getProviders,
   getUploadedFiles,
   deleteUploadedFile,
+  notifyAnomalies,
 };
+

@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Shield, Lock, Mail, AlertCircle, ArrowRight, Activity, Eye, EyeOff, Sparkles, Key, CheckCircle, ArrowLeft, LockKeyhole, Unlock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { TiltCard } from '../components/common/TiltCard';
 import { CinematicBackground } from '../components/landing/CinematicBackground';
 
 export const AdminLoginPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // Gatekeeper state: Check if previously unlocked in this session
   const [isUnlocked, setIsUnlocked] = useState(
     sessionStorage.getItem('admin_gatekeeper_unlocked') === 'true'
@@ -24,7 +27,13 @@ export const AdminLoginPage = () => {
   const [loading, setLoading] = useState(false);
   
   const { login, logout } = useAuth();
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('expired') === 'true') {
+      setError('Your 2-hour admin session has expired. Please log in again.');
+    }
+  }, [location.search]);
 
   // Master Secret Passcode (Matches REGISTRATION_SECRET in .env)
   const MASTER_ADMIN_PASSCODE = 'HenilNeelProject';
@@ -50,7 +59,7 @@ export const AdminLoginPage = () => {
   // Quick Demo Admin Fill
   const handleQuickAdminFill = () => {
     setEmail('admin1@cloudatlas.ai');
-    setPassword('AdminPass123!');
+    setPassword('CloudAtlasAdmin2026!');
     setError('');
   };
 
@@ -68,11 +77,11 @@ export const AdminLoginPage = () => {
 
     try {
       const user = await login(email, password);
-      if (user && user.role === 'super_admin') {
+      if (user && (user.role === 'super_admin' || user.role === 'admin')) {
         navigate('/admin/dashboard');
       } else {
         logout();
-        setError('Access Denied. This account does not possess Super Admin credentials.');
+        setError('Access Denied. This account does not possess Administrator credentials.');
       }
     } catch (err) {
       console.error('Admin Login Error:', err);

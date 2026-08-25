@@ -46,17 +46,17 @@ export const AppRouter = () => {
       {/* Admin Portal Routes */}
       <Route
         path="/admin"
-        element={<Navigate to="/admin/login" replace />}
+        element={<Navigate to="/admin/dashboard" replace />}
       />
       <Route
         path="/admin/login"
-        element={token && user?.role === 'super_admin' ? <Navigate to="/admin/dashboard" replace /> : <AdminLoginPage />}
+        element={token && (user?.role === 'super_admin' || user?.role === 'admin') ? <Navigate to="/admin/dashboard" replace /> : <AdminLoginPage />}
       />
 
       <Route
         path="/admin/dashboard"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
             <AdminDashboardPage />
           </ProtectedRoute>
         }
@@ -179,7 +179,7 @@ export const AppRouter = () => {
       <Route
         path="/users"
         element={
-          <ProtectedRoute allowedRoles={['super_admin']}>
+          <ProtectedRoute allowedRoles={['super_admin', 'admin']}>
             <UsersPage />
           </ProtectedRoute>
         }

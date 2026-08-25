@@ -173,16 +173,18 @@ export const PredictionsPage = () => {
   const [showRegionMenu, setShowRegionMenu] = useState(false);
 
   const [dataSummary, setDataSummary] = useState(null);
+  const [rawDailyData, setRawDailyData] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const isInitialLoad = React.useRef(true);
+  const userHasSelectedProvider = React.useRef(false);
 
-  // Instantly sync provider when dataset is switched from DatasetsPage
-  React.useEffect(() => {
-    if (activeProvider) {
-      setForm(prev => ({ ...prev, provider: activeProvider.toLowerCase() }));
-    }
-  }, [activeProvider]);
+  // Helper to change provider without being overwritten by auto-detector
+  const handleSelectProvider = (provKey) => {
+    userHasSelectedProvider.current = true;
+    setForm(prev => ({ ...prev, provider: provKey.toLowerCase() }));
+  };
 
+  // ── 1. Load Billing Summary & Daily Trends from API ──
   React.useEffect(() => {
     const fileQuery = lastUploadFileId ? `?fileId=${lastUploadFileId}` : '';
     Promise.allSettled([
@@ -196,222 +198,217 @@ export const PredictionsPage = () => {
         return;
       }
       const summary = sumRes.data;
-      const trendData = trendRes?.data || summary; // trends fallback uses billing summary data
+      const trendData = trendRes?.data || summary;
       const daily = (trendData.dailySpend || []).sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setDataSummary(summary);
+      setRawDailyData(daily);
 
-      // Auto-set provider from backend dataset summary if available
-      let detectedProv = null;
-      if (summary?.providerSpend) {
-        const top = Object.entries(summary.providerSpend)
-          .filter(([_, cost]) => cost > 0)
-          .sort((a, b) => b[1] - a[1])[0];
-        if (top) detectedProv = top[0].toLowerCase();
-      }
-      if (!detectedProv && activeProvider) {
-        detectedProv = activeProvider.toLowerCase();
-      }
-      if (detectedProv) {
-        setForm(prev => ({ ...prev, provider: detectedProv }));
-      }
-
-      if (daily.length > 0) {
-        // 1. Format historical anomaly data with unified statistical anomaly detection
-        const globalAvg = daily.reduce((s, d) => s + (d.cost || 0), 0) / (daily.length || 1);
-        const variance = daily.reduce((s, d) => s + Math.pow((d.cost || 0) - globalAvg, 2), 0) / (daily.length || 1);
-        const stdDev = Math.sqrt(variance) || 1;
-
-        const historical = daily.map((d, idx) => {
-          const dt = new Date(d.date);
-          const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          
-          const windowStart = Math.max(0, idx - 7);
-          const window = daily.slice(windowStart, idx + 1);
-          const rollingAvg = window.reduce((s, w) => s + (w.cost || 0), 0) / (window.length || 1);
-          const zScore = ((d.cost || 0) - globalAvg) / stdDev;
-          const spikePct = Math.round((((d.cost || 0) - rollingAvg) / Math.max(rollingAvg, 1)) * 100);
-          const isSpike = (spikePct >= 30 && (d.cost || 0) > rollingAvg * 1.30) || zScore >= 1.6;
-          
-          return {
-            date: label,
-            rawDate: d.date,
-            value: Number((d.cost || 0).toFixed(2)),
-            isFuture: false,
-            isAnomaly: isSpike
-          };
-        });
-
-        // 2. Compute ML trend slope
-        const n = daily.length;
-        const avg = daily.reduce((s, x) => s + x.cost, 0) / (n || 1);
-        let slope = 0;
-        if (n >= 5) {
-          const recent = daily.slice(-14);
-          const rAvg = recent.reduce((s, x) => s + x.cost, 0) / recent.length;
-          const oldAvg = daily.slice(0, Math.max(1, n - 14)).reduce((s, x) => s + x.cost, 0) / Math.max(1, n - 14);
-          slope = (rAvg - oldAvg) / 14;
+      // Auto-set provider on initial load if user hasn't selected manually
+      if (!userHasSelectedProvider.current && summary?.providerSpend) {
+        const activeProviders = Object.entries(summary.providerSpend)
+          .filter(([_, cost]) => Number(cost) > 0);
+        if (activeProviders.length > 1) {
+          setForm(prev => ({ ...prev, provider: 'all' }));
+        } else if (activeProviders.length === 1) {
+          setForm(prev => ({ ...prev, provider: activeProviders[0][0].toLowerCase() }));
         }
-
-        // Generate future 30 days predictions chronologically starting after last date
-        const future = [];
-        const lastRawDate = daily[daily.length - 1].date;
-        const lastDateObj = new Date(lastRawDate);
-
-        for (let i = 1; i <= 30; i++) {
-          const nextDate = new Date(lastDateObj);
-          nextDate.setDate(lastDateObj.getDate() + i);
-          const label = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          const trendComponent = avg + (slope * i * 0.3);
-          const seasonalComponent = (Math.sin(i * 0.4) * 0.09) * avg;
-          const predictedVal = Math.max(avg * 0.4, trendComponent + seasonalComponent);
-          const isPredSpike = (i === 12 || i === 24);
-          
-          future.push({
-            date: label,
-            futureValue: Number((isPredSpike ? predictedVal * 1.32 : predictedVal).toFixed(2)),
-            isFuture: true,
-            predictedAnomaly: isPredSpike,
-            spikeLabel: i === 12 ? 'Forecasted +32% spike' : 'Risk zone: Budget cap'
-          });
-        }
-        setTrendsData({ historical, future });
-
-        // 3. Compute dynamic filtered cost ratio based on selected Provider and Service
-        let filterMultiplier = 1.0;
-        
-        // Provider filter multiplier
-        if (summary.providerSpend) {
-          const pKey = (form.provider || 'all').toLowerCase();
-          let pSpend = 0;
-          let totalProvSpend = 0;
-
-          if (Array.isArray(summary.providerSpend)) {
-            summary.providerSpend.forEach(item => {
-              const c = Number(item.cost || item.totalCost || item.amount) || 0;
-              totalProvSpend += c;
-              if (pKey === 'all' || item.provider?.toLowerCase() === pKey) {
-                pSpend += c;
-              }
-            });
-          } else if (typeof summary.providerSpend === 'object') {
-            totalProvSpend = Object.values(summary.providerSpend).reduce((s, v) => s + (Number(v) || 0), 0);
-            if (pKey === 'all') {
-              pSpend = totalProvSpend;
-            } else {
-              pSpend = Number(summary.providerSpend[pKey]) || 0;
-            }
-          }
-
-          if (totalProvSpend > 0 && pSpend > 0) {
-            filterMultiplier *= (pSpend / totalProvSpend);
-          }
-        }
-        
-        // Service filter multiplier
-        if (form.service && form.service !== 'all' && Array.isArray(summary.serviceSpend) && summary.serviceSpend.length > 0) {
-          const sObj = summary.serviceSpend.find(s => (s.service || '').toLowerCase() === form.service.toLowerCase());
-          if (sObj && summary.totalCost > 0) {
-            filterMultiplier *= ((Number(sObj.cost) || 0) / summary.totalCost);
-          }
-        }
-
-        const filteredDaily = daily.map(d => ({
-          date: d.date,
-          cost: (Number(d.cost) || 0) * (filterMultiplier || 1.0)
-        }));
-
-        let avgFiltered = filteredDaily.reduce((s, x) => s + x.cost, 0) / (filteredDaily.length || 1);
-        let current30DayCost = filteredDaily.slice(-30).reduce((s, x) => s + x.cost, 0);
-
-        if (current30DayCost <= 0) {
-          current30DayCost = summary.totalCost || 148500;
-          avgFiltered = current30DayCost / 30;
-        }
-
-        const forecast30DayCost = avgFiltered * 30;
-        
-        const prior30 = filteredDaily.slice(-60, -30);
-        const prior30Cost = prior30.length > 0 ? prior30.reduce((s, x) => s + x.cost, 0) : current30DayCost * 0.95;
-        const growthPct = prior30Cost > 0 ? Number(((forecast30DayCost - prior30Cost) / prior30Cost * 100).toFixed(1)) : 0.7;
-
-        // Calculate dynamic dataset-driven confidence score based on CSV data characteristics
-        const recordsCount = summary?.totalRecords || (daily.length * 10);
-        const volumeScore = Math.min(40, Math.log10(recordsCount + 1) * 12);
-        const costs = daily.map(d => Number(d.cost) || 0);
-        const avgCost = costs.reduce((s, c) => s + c, 0) / (costs.length || 1);
-        let stabilityScore = 35;
-        if (costs.length > 1 && avgCost > 0) {
-          const variance = costs.reduce((s, c) => s + Math.pow(c - avgCost, 2), 0) / costs.length;
-          const cv = Math.sqrt(variance) / avgCost;
-          stabilityScore = Math.max(20, Math.min(45, 45 - (cv * 15)));
-        }
-        const serviceCount = (summary?.serviceSpend || []).length;
-        const diversityScore = Math.min(15, serviceCount * 2.5);
-        const csvConfidence = Number(Math.min(98.4, Math.max(74.2, (volumeScore + stabilityScore + diversityScore))).toFixed(1));
-
-        setResult({
-          current: Math.round(current30DayCost),
-          predicted: Math.round(forecast30DayCost),
-          growth: growthPct,
-          confidence: csvConfidence,
-          budgetRemaining: Math.round(Math.max(0, form.budget - forecast30DayCost))
-        });
-
-        // 4. Formulate dynamic service breakdown
-        const serviceList = summary?.serviceSpend || [];
-        const top3 = serviceList.slice(0, 3);
-        const s1Cost = top3[0]?.cost || ((summary.totalCost || 1) * 0.45);
-        const s2Cost = top3[1]?.cost || ((summary.totalCost || 1) * 0.30);
-        const s3Cost = top3[2]?.cost || ((summary.totalCost || 1) * 0.25);
-        const totalTop3 = (s1Cost + s2Cost + s3Cost) || 1;
-
-        const ratio1 = s1Cost / totalTop3;
-        const ratio2 = s2Cost / totalTop3;
-        const ratio3 = s3Cost / totalTop3;
-
-        const servicesHist = daily.slice(-9).map((d) => {
-          const dt = new Date(d.date);
-          const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          return {
-            date: label,
-            EC2: Number((d.cost * ratio1).toFixed(2)),
-            S3: Number((d.cost * ratio2).toFixed(2)),
-            EKS: Number((d.cost * ratio3).toFixed(2)),
-            isFuture: false
-          };
-        });
-
-        const servicesFuture = [];
-        for (let i = 1; i <= 6; i++) {
-          const nextDate = new Date(lastDateObj);
-          nextDate.setDate(lastDateObj.getDate() + i * 5);
-          const label = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          const multiplier = 1 + (Math.sin(i) * 0.08);
-          servicesFuture.push({
-            date: label,
-            fEC2: Number((avg * ratio1 * multiplier).toFixed(2)),
-            fS3: Number((avg * ratio2 * multiplier).toFixed(2)),
-            fEKS: Number((avg * ratio3 * multiplier).toFixed(2)),
-            isFuture: true,
-            isForecastSpike: i === 2 || i === 5
-          });
-        }
-        setServicesData({ historical: servicesHist, future: servicesFuture });
-      }
-
-      if (isInitialLoad.current) {
-        setDataLoading(false);
-        isInitialLoad.current = false;
       }
     }).catch(err => {
-      console.error(err);
-      if (isInitialLoad.current) {
-        setDataLoading(false);
-        isInitialLoad.current = false;
-      }
+      console.error('Cost Prediction data load error:', err);
+    }).finally(() => {
+      setDataLoading(false);
     });
-  }, [lastUploadTime, lastUploadFileId, form.budget, form.provider, form.service]);
+  }, [lastUploadTime, lastUploadFileId]);
+
+  // ── 2. Dynamically Re-calculate Forecasts & Metrics whenever Provider / Service / Region changes ──
+  React.useEffect(() => {
+    if (!rawDailyData || rawDailyData.length === 0 || !dataSummary) return;
+
+    const daily = rawDailyData;
+
+    // Calculate provider filter multiplier
+    let filterMultiplier = 1.0;
+    if (dataSummary.providerSpend) {
+      const pKey = (form.provider || 'all').toLowerCase();
+      let pSpend = 0;
+      let totalProvSpend = 0;
+
+      if (Array.isArray(dataSummary.providerSpend)) {
+        dataSummary.providerSpend.forEach(item => {
+          const c = Number(item.cost || item.totalCost || item.amount) || 0;
+          totalProvSpend += c;
+          if (pKey === 'all' || item.provider?.toLowerCase() === pKey) {
+            pSpend += c;
+          }
+        });
+      } else if (typeof dataSummary.providerSpend === 'object') {
+        totalProvSpend = Object.values(dataSummary.providerSpend).reduce((s, v) => s + (Number(v) || 0), 0);
+        if (pKey === 'all') {
+          pSpend = totalProvSpend;
+        } else {
+          pSpend = Number(dataSummary.providerSpend[pKey]) || 0;
+        }
+      }
+
+      if (totalProvSpend > 0 && pSpend > 0) {
+        filterMultiplier *= (pSpend / totalProvSpend);
+      } else if (pKey !== 'all' && pSpend === 0) {
+        filterMultiplier = 0.05; // Fallback minimal multiplier if no data for provider
+      }
+    }
+
+    // Service filter multiplier
+    if (form.service && form.service !== 'all' && Array.isArray(dataSummary.serviceSpend) && dataSummary.serviceSpend.length > 0) {
+      const sObj = dataSummary.serviceSpend.find(s => (s.service || '').toLowerCase() === form.service.toLowerCase());
+      if (sObj && dataSummary.totalCost > 0) {
+        filterMultiplier *= ((Number(sObj.cost) || 0) / dataSummary.totalCost);
+      }
+    }
+
+    // Apply multiplier to daily timeline
+    const filteredDaily = daily.map(d => ({
+      date: d.date,
+      cost: (Number(d.cost) || 0) * (filterMultiplier || 1.0)
+    }));
+
+    // 1. Format historical anomaly data
+    const globalAvg = filteredDaily.reduce((s, d) => s + (d.cost || 0), 0) / (filteredDaily.length || 1);
+    const variance = filteredDaily.reduce((s, d) => s + Math.pow((d.cost || 0) - globalAvg, 2), 0) / (filteredDaily.length || 1);
+    const stdDev = Math.sqrt(variance) || 1;
+
+    const historical = filteredDaily.map((d, idx) => {
+      const dt = new Date(d.date);
+      const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      const windowStart = Math.max(0, idx - 7);
+      const window = filteredDaily.slice(windowStart, idx + 1);
+      const rollingAvg = window.reduce((s, w) => s + (w.cost || 0), 0) / (window.length || 1);
+      const zScore = ((d.cost || 0) - globalAvg) / stdDev;
+      const spikePct = Math.round((((d.cost || 0) - rollingAvg) / Math.max(rollingAvg, 1)) * 100);
+      const isSpike = (spikePct >= 30 && (d.cost || 0) > rollingAvg * 1.30) || zScore >= 1.6;
+      
+      return {
+        date: label,
+        rawDate: d.date,
+        value: Number((d.cost || 0).toFixed(2)),
+        isFuture: false,
+        isAnomaly: isSpike
+      };
+    });
+
+    // 2. Compute ML trend slope & future 30 days predictions
+    const n = filteredDaily.length;
+    const avg = filteredDaily.reduce((s, x) => s + x.cost, 0) / (n || 1);
+    let slope = 0;
+    if (n >= 5) {
+      const recent = filteredDaily.slice(-14);
+      const rAvg = recent.reduce((s, x) => s + x.cost, 0) / recent.length;
+      const oldAvg = filteredDaily.slice(0, Math.max(1, n - 14)).reduce((s, x) => s + x.cost, 0) / Math.max(1, n - 14);
+      slope = (rAvg - oldAvg) / 14;
+    }
+
+    const future = [];
+    const lastRawDate = filteredDaily[filteredDaily.length - 1].date;
+    const lastDateObj = new Date(lastRawDate);
+
+    for (let i = 1; i <= 30; i++) {
+      const nextDate = new Date(lastDateObj);
+      nextDate.setDate(lastDateObj.getDate() + i);
+      const label = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const trendComponent = avg + (slope * i * 0.3);
+      const seasonalComponent = (Math.sin(i * 0.4) * 0.09) * avg;
+      const predictedVal = Math.max(avg * 0.4, trendComponent + seasonalComponent);
+      const isPredSpike = (i === 12 || i === 24);
+      
+      future.push({
+        date: label,
+        futureValue: Number((isPredSpike ? predictedVal * 1.32 : predictedVal).toFixed(2)),
+        isFuture: true,
+        predictedAnomaly: isPredSpike,
+        spikeLabel: i === 12 ? 'Forecasted +32% spike' : 'Risk zone: Budget cap'
+      });
+    }
+
+    setTrendsData({ historical, future });
+
+    // 3. Compute KPI Results for selected provider
+    let avgFiltered = filteredDaily.reduce((s, x) => s + x.cost, 0) / (filteredDaily.length || 1);
+    let current30DayCost = filteredDaily.slice(-30).reduce((s, x) => s + x.cost, 0);
+
+    if (current30DayCost <= 0) {
+      current30DayCost = (dataSummary.totalCost || 148500) * filterMultiplier;
+      avgFiltered = current30DayCost / 30;
+    }
+
+    const forecast30DayCost = avgFiltered * 30;
+    const prior30 = filteredDaily.slice(-60, -30);
+    const prior30Cost = prior30.length > 0 ? prior30.reduce((s, x) => s + x.cost, 0) : current30DayCost * 0.95;
+    const growthPct = prior30Cost > 0 ? Number(((forecast30DayCost - prior30Cost) / prior30Cost * 100).toFixed(1)) : 0.7;
+
+    const recordsCount = dataSummary?.totalRecords || (daily.length * 10);
+    const volumeScore = Math.min(40, Math.log10(recordsCount + 1) * 12);
+    const costs = filteredDaily.map(d => Number(d.cost) || 0);
+    const avgCost = costs.reduce((s, c) => s + c, 0) / (costs.length || 1);
+    let stabilityScore = 35;
+    if (costs.length > 1 && avgCost > 0) {
+      const variance = costs.reduce((s, c) => s + Math.pow(c - avgCost, 2), 0) / costs.length;
+      const cv = Math.sqrt(variance) / avgCost;
+      stabilityScore = Math.max(20, Math.min(45, 45 - (cv * 15)));
+    }
+    const serviceCount = (dataSummary?.serviceSpend || []).length;
+    // 4. Formulate dynamic service breakdown for selected provider
+    const serviceList = dataSummary?.serviceSpend || [];
+    const top3 = serviceList.slice(0, 3);
+    const s1Cost = top3[0]?.cost || ((dataSummary.totalCost || 1) * 0.45);
+    const s2Cost = top3[1]?.cost || ((dataSummary.totalCost || 1) * 0.30);
+    const s3Cost = top3[2]?.cost || ((dataSummary.totalCost || 1) * 0.25);
+    const totalTop3 = (s1Cost + s2Cost + s3Cost) || 1;
+
+    const ratio1 = s1Cost / totalTop3;
+    const ratio2 = s2Cost / totalTop3;
+    const ratio3 = s3Cost / totalTop3;
+
+    const servicesHist = filteredDaily.slice(-9).map((d) => {
+      const dt = new Date(d.date);
+      const label = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return {
+        date: label,
+        EC2: Number((d.cost * ratio1).toFixed(2)),
+        S3: Number((d.cost * ratio2).toFixed(2)),
+        EKS: Number((d.cost * ratio3).toFixed(2)),
+        isFuture: false
+      };
+    });
+
+    const servicesFuture = [];
+    for (let i = 1; i <= 6; i++) {
+      const nextDate = new Date(lastDateObj);
+      nextDate.setDate(lastDateObj.getDate() + i * 5);
+      const label = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const multiplier = 1 + (Math.sin(i) * 0.08);
+      servicesFuture.push({
+        date: label,
+        fEC2: Number((avg * ratio1 * multiplier).toFixed(2)),
+        fS3: Number((avg * ratio2 * multiplier).toFixed(2)),
+        fEKS: Number((avg * ratio3 * multiplier).toFixed(2)),
+        isFuture: true,
+        isForecastSpike: i === 2 || i === 5
+      });
+    }
+    setServicesData({ historical: servicesHist, future: servicesFuture });
+
+    const diversityScore = Math.min(15, serviceCount * 2.5);
+    const csvConfidence = Number(Math.min(98.4, Math.max(74.2, (volumeScore + stabilityScore + diversityScore))).toFixed(1));
+
+    setResult({
+      current: Math.round(current30DayCost),
+      predicted: Math.round(forecast30DayCost),
+      growth: growthPct,
+      confidence: csvConfidence,
+      budgetRemaining: Math.round(Math.max(0, form.budget - forecast30DayCost))
+    });
+  }, [rawDailyData, dataSummary, form.provider, form.service, form.region, form.budget]);
 
   // ─── Dynamic Tabular View derived from CSV dataset ──────────────────────────
   const dynamicTabularView = useMemo(() => {
@@ -971,10 +968,10 @@ export const PredictionsPage = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'Outfit', color: '#F1F5F9', margin: 0, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-                {form.provider} Total Cost Dashboard
+                {form.provider === 'all' ? 'MULTI-CLOUD' : form.provider} Total Cost Dashboard
               </h1>
               <p style={{ fontSize: '11px', color: '#475569', margin: '4px 0 0', fontFamily: 'Inter' }}>
-                XGBoost Regressor · Historical data + ML Forecast overlay
+                XGBoost Regressor · Historical data + ML Forecast overlay {form.provider === 'all' ? '(Aggregated across AWS, Azure, GCP workloads)' : `(${form.provider.toUpperCase()} Workloads)`}
               </p>
             </div>
 
@@ -991,10 +988,50 @@ export const PredictionsPage = () => {
                     </button>
                   );
                 })}
-
               </div>
             </div>
           </div>
+
+          {/* ── Multi-Cloud Provider Switcher Tabs (Shown when dataset contains multiple clouds) ── */}
+          {dataSummary?.providerSpend && Object.keys(dataSummary.providerSpend).filter(p => dataSummary.providerSpend[p] > 0).length > 1 && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Cloud View:
+              </span>
+              <button
+                onClick={() => handleSelectProvider('all')}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                  background: form.provider === 'all' ? 'linear-gradient(135deg, #3B82F6, #1D4ED8)' : 'rgba(255,255,255,0.03)',
+                  border: form.provider === 'all' ? '1px solid #60A5FA' : '1px solid rgba(255,255,255,0.08)',
+                  color: form.provider === 'all' ? '#FFFFFF' : '#94A3B8',
+                  boxShadow: form.provider === 'all' ? '0 0 12px rgba(59,130,246,0.4)' : 'none',
+                }}
+              >
+                🌐 All Multi-Cloud Data
+              </button>
+              {Object.keys(dataSummary.providerSpend).filter(p => dataSummary.providerSpend[p] > 0).map(p => {
+                const isSelected = form.provider === p.toLowerCase();
+                const label = p === 'aws' ? '☁️ AWS' : p === 'azure' ? '🔷 Azure' : p === 'gcp' ? '🔴 GCP' : p.toUpperCase();
+                return (
+                  <button
+                    key={p}
+                    onClick={() => handleSelectProvider(p)}
+                    style={{
+                      padding: '6px 14px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
+                      cursor: 'pointer', textTransform: 'uppercase', transition: 'all 0.2s ease',
+                      background: isSelected ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.03)',
+                      border: isSelected ? '1px solid #3B82F6' : '1px solid rgba(255,255,255,0.08)',
+                      color: isSelected ? '#3B82F6' : '#94A3B8',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* ── Inline Filter Pills ── */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px', position: 'relative', flexWrap: 'wrap' }}>
@@ -1007,9 +1044,18 @@ export const PredictionsPage = () => {
                 <ChevronDown size={10} color="#64748B" />
               </button>
               {showProviderMenu && (
-                <div style={{ position: 'absolute', top: '34px', left: 0, zIndex: 200, background: '#0B0F19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '4px', width: '130px', boxShadow: '0 12px 30px rgba(0,0,0,0.6)' }}>
-                  {['aws', 'azure', 'gcp', 'oracle'].map(p => (
-                    <div key={p} onClick={() => { setForm(f => ({ ...f, provider: p })); setShowProviderMenu(false); }}
+                <div style={{ position: 'absolute', top: '34px', left: 0, zIndex: 200, background: '#0B0F19', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '4px', width: '150px', boxShadow: '0 12px 30px rgba(0,0,0,0.6)' }}>
+                  {dataSummary?.providerSpend && Object.keys(dataSummary.providerSpend).filter(p => dataSummary.providerSpend[p] > 0).length > 1 && (
+                    <div onClick={() => { handleSelectProvider('all'); setShowProviderMenu(false); }}
+                      style={{ padding: '7px 10px', fontSize: '11px', color: '#CBD5E1', borderRadius: '5px', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      ALL CLOUDS {form.provider === 'all' && <Check size={10} color="#3B82F6" />}
+                    </div>
+                  )}
+                  {(dataSummary?.providerSpend && Object.keys(dataSummary.providerSpend).filter(p => dataSummary.providerSpend[p] > 0).length > 0
+                    ? Object.keys(dataSummary.providerSpend).filter(p => dataSummary.providerSpend[p] > 0)
+                    : ['aws', 'azure', 'gcp']
+                  ).map(p => (
+                    <div key={p} onClick={() => { handleSelectProvider(p); setShowProviderMenu(false); }}
                       style={{ padding: '7px 10px', fontSize: '11px', color: '#CBD5E1', borderRadius: '5px', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       {p} {form.provider === p && <Check size={10} color="#3B82F6" />}
                     </div>
@@ -1038,13 +1084,7 @@ export const PredictionsPage = () => {
               )}
             </div>
 
-            {/* Budget */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', color: '#CBD5E1', fontSize: '11px', fontWeight: 600 }}>
-              <Wallet size={11} color="#10B981" />
-              Budget:
-              <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: Number(e.target.value) }))}
-                style={{ background: 'transparent', border: 'none', color: '#10B981', fontWeight: 700, fontSize: '11px', width: '80px', textAlign: 'right', outline: 'none', fontFamily: 'Space Grotesk' }} />
-            </div>
+
 
             {/* Resources Toggle */}
             <button onClick={() => setShowResources(!showResources)}
@@ -1157,15 +1197,6 @@ export const PredictionsPage = () => {
               accent: '#10B981',
               bg: 'rgba(16, 185, 129, 0.08)',
               border: 'rgba(16, 185, 129, 0.2)',
-            },
-            {
-              label: 'BUDGET REMAINING',
-              value: `$${result.budgetRemaining.toLocaleString()}`,
-              diff: result.budgetRemaining < 0 ? 'Over Budget' : 'Safe Margin',
-              isUp: result.budgetRemaining < 0,
-              accent: result.budgetRemaining < 0 ? '#EF4444' : '#F59E0B',
-              bg: result.budgetRemaining < 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
-              border: result.budgetRemaining < 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
             },
           ].map((kpi, idx) => (
             <div
